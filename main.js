@@ -9,6 +9,7 @@ const TEST_ROOM_PASSWORD = 'qass1234';
 const { createClient } = window.supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+let currentUser = '';       // 로그인 시 입력한 이름
 let currentRoom = null;
 let currentUploaderName = '익명';
 let allCaptures = [];
@@ -17,12 +18,37 @@ let pendingRoom = null;
 
 // ── 초기화 ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+  bindLoginEvents();
   bindRoomsScreenEvents();
   bindRoomScreenEvents();
   bindModalEvents();
+  showScreen('login');
+});
+
+// ── 로그인 ────────────────────────────────────────────────────────────────────
+function bindLoginEvents() {
+  const btn = document.getElementById('btn-login');
+  const input = document.getElementById('login-name');
+  btn.addEventListener('click', onLogin);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') onLogin(); });
+}
+
+async function onLogin() {
+  const name = document.getElementById('login-name').value.trim() || '익명';
+  currentUser = name;
+  currentUploaderName = name;
+  document.getElementById('rooms-user-badge').textContent = `👤 ${name}`;
+  showScreen('rooms');
   await ensureTestRoom();
   await loadRooms();
-});
+}
+
+// ── 화면 전환 ─────────────────────────────────────────────────────────────────
+function showScreen(name) {
+  document.getElementById('login-screen').classList.toggle('hidden', name !== 'login');
+  document.getElementById('rooms-screen').classList.toggle('hidden', name !== 'rooms');
+  document.getElementById('room-screen').classList.toggle('hidden', name !== 'room');
+}
 
 // ── 테스트 방 자동 생성 ──────────────────────────────────────────────────────
 async function ensureTestRoom() {
@@ -82,8 +108,15 @@ function renderRooms(rooms) {
 // ── 방 만들기 이벤트 ──────────────────────────────────────────────────────────
 function bindRoomsScreenEvents() {
   document.getElementById('btn-create-room').addEventListener('click', () => {
+    document.getElementById('new-room-creator').value = currentUser || '';
     document.getElementById('create-room-modal').classList.remove('hidden');
     document.getElementById('new-room-name').focus();
+  });
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    currentUser = '';
+    currentUploaderName = '익명';
+    document.getElementById('login-name').value = '';
+    showScreen('login');
   });
 }
 
@@ -129,16 +162,12 @@ function closeCreateModal() {
 function openEnterModal(room, isTest = false) {
   pendingRoom = room;
   document.getElementById('enter-room-title').textContent = `"${room.room_name}" 입장`;
-  document.getElementById('enter-room-password').value = '';
-  document.getElementById('enter-uploader-name').value = '';
+  document.getElementById('enter-room-password').value = isTest ? TEST_ROOM_PASSWORD : '';
+  document.getElementById('enter-uploader-name').value = currentUser || '';
   document.getElementById('enter-room-error').classList.add('hidden');
-  if (isTest) {
-    document.getElementById('enter-room-password').value = TEST_ROOM_PASSWORD;
-    document.getElementById('enter-uploader-name').placeholder = '내 이름 (예: 테스트 사용자)';
-  }
   document.getElementById('enter-room-modal').classList.remove('hidden');
-  const focusEl = isTest
-    ? document.getElementById('enter-uploader-name')
+  const focusEl = isTest || currentUser
+    ? document.getElementById('enter-room-password')
     : document.getElementById('enter-room-password');
   focusEl.focus();
 }
@@ -183,8 +212,7 @@ function enterRoom(room, uploaderName) {
 
   document.getElementById('room-name-label').textContent = room.room_name;
   document.getElementById('uploader-badge').textContent = `👤 ${uploaderName}`;
-  document.getElementById('rooms-screen').classList.add('hidden');
-  document.getElementById('room-screen').classList.remove('hidden');
+  showScreen('room');
 
   allCaptures = [];
   loadRoomCaptures();
@@ -196,8 +224,7 @@ function bindRoomScreenEvents() {
   document.getElementById('btn-back').addEventListener('click', () => {
     if (realtimeChannel) { db.removeChannel(realtimeChannel); realtimeChannel = null; }
     currentRoom = null;
-    document.getElementById('room-screen').classList.add('hidden');
-    document.getElementById('rooms-screen').classList.remove('hidden');
+    showScreen('rooms');
     loadRooms();
   });
   document.getElementById('search').addEventListener('input', renderFiltered);
