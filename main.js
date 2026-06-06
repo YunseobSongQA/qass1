@@ -98,11 +98,41 @@ function renderRooms(rooms) {
         <div class="room-card-name">${esc(room.room_name)}${isTest ? ' <span class="test-badge">테스트</span>' : ''}</div>
         <div class="room-card-meta">만든이: ${esc(room.created_by || '익명')} · ${date}</div>
       </div>
-      <button class="btn-sm btn-primary room-enter-btn">입장 →</button>
+      <div class="room-card-actions">
+        <button class="btn-sm btn-primary room-enter-btn">입장 →</button>
+        ${!isTest ? '<button class="btn-sm btn-danger room-delete-btn">삭제</button>' : ''}
+      </div>
     `;
     card.querySelector('.room-enter-btn').addEventListener('click', () => openEnterModal(room, isTest));
+    card.querySelector('.room-delete-btn')?.addEventListener('click', () => deleteRoom(room));
     grid.appendChild(card);
   });
+}
+
+// ── 방 삭제 ──────────────────────────────────────────────────────────────────
+async function deleteRoom(room) {
+  if (!confirm(`"${room.room_name}" 방을 삭제할까요?\n방 안의 모든 캡처도 함께 삭제됩니다.`)) return;
+  setLoading(true);
+  try {
+    const { data: captures } = await db
+      .from('captures')
+      .select('image_path')
+      .eq('room_id', room.id);
+
+    const paths = (captures || []).map(c => c.image_path).filter(Boolean);
+    if (paths.length > 0) {
+      await db.storage.from('qa-captures').remove(paths);
+    }
+
+    const { error } = await db.from('rooms').delete().eq('id', room.id);
+    if (error) throw error;
+
+    await loadRooms();
+  } catch (err) {
+    alert('삭제 실패: ' + err.message);
+  } finally {
+    setLoading(false);
+  }
 }
 
 // ── 방 만들기 이벤트 ──────────────────────────────────────────────────────────
