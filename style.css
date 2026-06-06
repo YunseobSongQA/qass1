@@ -565,12 +565,67 @@ body {
 
 .hidden { display: none !important; }
 
+.btn-label-short { display: none; }
+
 @media (max-width: 600px) {
-  .captures-grid { padding: 12px; gap: 12px; }
-  .toolbar { padding: 10px 12px; }
-  .topbar { padding: 0 12px; }
+  /* ── 공통 Topbar ── */
+  .topbar { padding: 0 12px; gap: 8px; }
+  .topbar-subtitle { display: none; }
   .uploader-badge { display: none; }
+  .realtime-badge { display: none; }
+  .btn-label-long { display: none; }
+  .btn-label-short { display: inline; }
+
+  /* ── 방 목록 Topbar ── */
+  #rooms-screen .topbar-right { gap: 6px; }
+  #rooms-screen .topbar-right .btn-sm { padding: 6px 10px; font-size: 12px; }
+
+  /* ── 방 내부 Topbar: 2줄 레이아웃 ── */
+  #room-screen .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 8px 12px;
+    gap: 4px 8px;
+  }
+  #room-screen .topbar-brand { font-size: 17px; }
+  #room-screen .topbar-center {
+    order: 3;
+    width: 100%;
+    padding: 2px 0 4px;
+    overflow: hidden;
+  }
+  #room-screen .room-name-label {
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 100%;
+  }
+  #room-screen .topbar-right { gap: 4px; margin-left: auto; }
+  #room-screen .topbar-right .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ── Toolbar ── */
+  .toolbar { padding: 10px 12px; gap: 8px; }
+  .search-input { min-width: 0; flex: 1; }
+  .filter-select { max-width: 120px; flex-shrink: 0; }
+  .count-label { width: 100%; margin-left: 0; order: 10; font-size: 12px; }
+
+  /* ── Captures grid ── */
+  .captures-grid { padding: 12px; gap: 12px; grid-template-columns: 1fr; }
+  .card-thumb { height: 160px; }
+  .card-body { padding: 10px 12px 6px; }
+  .card-actions { padding: 8px 12px; gap: 6px; }
+
+  /* ── Rooms ── */
   .rooms-grid { padding: 0 12px 32px; }
   .rooms-hero { padding: 28px 16px 20px; }
   .rooms-hero-title { font-size: 22px; }
+  .room-card { padding: 14px 16px; gap: 10px; }
+  .room-card-name { font-size: 14px; }
+  .room-card-meta { font-size: 12px; }
+
+  /* ── Login & Modal ── */
+  .login-card { padding: 28px 20px; }
+  .modal-card { padding: 24px 20px; }
 }

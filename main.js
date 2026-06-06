@@ -224,6 +224,28 @@ async function onEnterRoomSubmit() {
     if (error || !roomData) throw new Error('방 정보를 불러올 수 없습니다.');
     if (password !== roomData.room_password) throw new Error('비밀번호가 올바르지 않습니다.');
 
+    const isTestRoom = pendingRoom.room_name === TEST_ROOM_NAME;
+    if (!isTestRoom && uploaderName !== '익명') {
+      const localKey = `qass_session_${pendingRoom.id}`;
+      const localSession = JSON.parse(localStorage.getItem(localKey) || 'null');
+      const isSamePerson = localSession && localSession.name === uploaderName;
+
+      if (!isSamePerson) {
+        const eightHoursAgo = new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString();
+        const { data: existing } = await db
+          .from('captures')
+          .select('id')
+          .eq('room_id', pendingRoom.id)
+          .eq('uploader_name', uploaderName)
+          .gte('captured_at', eightHoursAgo)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          throw new Error('이미 사용 중인 이름입니다. 다른 이름을 사용해주세요.');
+        }
+      }
+      localStorage.setItem(localKey, JSON.stringify({ name: uploaderName, time: Date.now() }));
+    }
+
     document.getElementById('enter-room-modal').classList.add('hidden');
     const room = pendingRoom;
     pendingRoom = null;
