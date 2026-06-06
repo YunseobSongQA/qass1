@@ -100,7 +100,7 @@ function renderRooms(rooms) {
       </div>
       <div class="room-card-actions">
         <button class="btn-sm btn-primary room-enter-btn">입장 →</button>
-        ${!isTest ? '<button class="btn-sm btn-danger room-delete-btn">삭제</button>' : ''}
+        ${!isTest && currentUser && currentUser === room.created_by ? '<button class="btn-sm btn-danger room-delete-btn">삭제</button>' : ''}
       </div>
     `;
     card.querySelector('.room-enter-btn').addEventListener('click', () => openEnterModal(room, isTest));
