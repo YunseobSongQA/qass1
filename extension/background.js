@@ -184,7 +184,7 @@ async function finalizeAll() {
   for (const tabId of [...tabCaptures.keys()]) await finalizeTab(tabId);
 }
 
-// ── 방에 업로드 ───────────────────────────────────────────────────────────────
+// ── 방에 업로드 (같은 URL 중복 시 기존 항목 교체) ────────────────────────────
 async function uploadToRoom(record) {
   const { roomSession } = await chrome.storage.local.get('roomSession');
   if (!roomSession?.room_id) return;
@@ -193,10 +193,31 @@ async function uploadToRoom(record) {
   await updateHistoryRecord(record.id, { uploading: true, uploaded: false, uploadFailed: false });
 
   try {
-    const res = await fetch(record.dataUrl);
-    const blob = await res.blob();
-
+    const blob = await fetch(record.dataUrl).then(r => r.blob());
     const path = `rooms/${room_id}/${record.id}.png`;
+
+    // 같은 방 + 같은 URL 기존 캡처 조회
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/captures?room_id=eq.${room_id}&url=eq.${encodeURIComponent(record.url)}&select=id,image_path`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+    );
+    const existing = await checkRes.json().catch(() => []);
+
+    // 기존 항목 삭제 (Storage + DB)
+    for (const old of (Array.isArray(existing) ? existing : [])) {
+      if (old.image_path) {
+        await fetch(`${SUPABASE_URL}/storage/v1/object/qa-captures/${old.image_path}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+        }).catch(() => {});
+      }
+      await fetch(`${SUPABASE_URL}/rest/v1/captures?id=eq.${old.id}`, {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      }).catch(() => {});
+    }
+
+    // 새 이미지 Storage 업로드
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/qa-captures/${path}`, {
       method: 'POST',
       headers: {
@@ -207,12 +228,12 @@ async function uploadToRoom(record) {
       },
       body: blob,
     });
-
     if (!uploadRes.ok) {
       const err = await uploadRes.json().catch(() => ({}));
       throw new Error(err.message || `Storage upload failed: ${uploadRes.status}`);
     }
 
+    // DB 신규 삽입
     const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/captures`, {
       method: 'POST',
       headers: {
@@ -230,14 +251,13 @@ async function uploadToRoom(record) {
         image_path: path,
       }),
     });
-
     if (!insertRes.ok) {
       const err = await insertRes.json().catch(() => ({}));
       throw new Error(err.message || `DB insert failed: ${insertRes.status}`);
     }
 
     await updateHistoryRecord(record.id, { uploading: false, uploaded: true, uploadFailed: false });
-    console.log(`[QA] uploaded "${record.title}" → room ${room_id}`);
+    console.log(`[QA] uploaded "${record.title}" → room ${room_id} (중복 ${existing.length}건 교체)`);
   } catch (e) {
     await updateHistoryRecord(record.id, { uploading: false, uploaded: false, uploadFailed: true });
     console.warn('[QA] upload failed:', e.message);
