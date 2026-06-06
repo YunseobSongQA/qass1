@@ -260,6 +260,7 @@ function bindRoomScreenEvents() {
   document.getElementById('search').addEventListener('input', renderFiltered);
   document.getElementById('filter-user').addEventListener('change', renderFiltered);
   document.getElementById('btn-dl-zip').addEventListener('click', downloadRoomZip);
+  document.getElementById('upload-input').addEventListener('change', onManualUpload);
 }
 
 // ── 모달 이벤트 바인딩 ────────────────────────────────────────────────────────
@@ -422,6 +423,44 @@ async function downloadCapture(cap) {
   a.download = makeFileName(cap.title, cap.captured_at);
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+async function onManualUpload(e) {
+  const files = [...e.target.files];
+  e.target.value = '';
+  if (!files.length || !currentRoom) return;
+
+  setLoading(true);
+  let successCount = 0;
+  try {
+    for (const file of files) {
+      const id = Date.now() + Math.random();
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `rooms/${currentRoom.id}/${id}.${ext}`;
+
+      const { error: upErr } = await db.storage
+        .from('qa-captures')
+        .upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+
+      const title = file.name.replace(/\.[^.]+$/, '');
+      const { error: dbErr } = await db.from('captures').insert({
+        room_id: currentRoom.id,
+        uploader_name: currentUploaderName,
+        url: '',
+        title,
+        capture_count: 1,
+        image_path: path,
+      });
+      if (dbErr) throw dbErr;
+      successCount++;
+    }
+    if (successCount > 0) await loadRoomCaptures();
+  } catch (err) {
+    alert(`업로드 실패: ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
 }
 
 async function downloadRoomZip() {

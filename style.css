@@ -287,6 +287,15 @@ body {
 
 .btn-primary:hover { background: var(--primary-dark) !important; border-color: var(--primary-dark) !important; }
 
+.btn-upload {
+  background: #f8fafc;
+  color: var(--text);
+  border-color: var(--border);
+  cursor: pointer;
+}
+
+.btn-upload:hover { background: var(--bg); }
+
 .btn-danger {
   background: transparent;
   color: var(--danger);
