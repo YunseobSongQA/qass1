@@ -1,117 +1,253 @@
 'use strict';
 
 const SUPABASE_URL = 'https://snjexfohyklviarxprvm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_c_1296S0EE8eHZO2EHnTIg_F2v4mov9';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuamV4Zm9oeWtsdmlhcnhwcnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDgwODgsImV4cCI6MjA5MzI4NDA4OH0.jxiiBLM4hyGwoJ7U4RC_M1Laqm0z8T0jHpmU3LlVW3k';
+
+const TEST_ROOM_NAME = 'QASS 테스트 방';
+const TEST_ROOM_PASSWORD = 'qass1234';
 
 const { createClient } = window.supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let currentUser = null;
+let currentRoom = null;
+let currentUploaderName = '익명';
 let allCaptures = [];
 let realtimeChannel = null;
+let pendingRoom = null;
 
-// ── 초기화 ─────────────────────────────────────────────────────────────────
+// ── 초기화 ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-  bindAuthEvents();
-  bindDashboardEvents();
-
-  const { data: { session } } = await db.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    showDashboard();
-    await loadCaptures();
-    subscribeRealtime();
-  } else {
-    showAuth();
-  }
-
-  db.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && !currentUser) {
-      currentUser = session.user;
-      showDashboard();
-      loadCaptures();
-      subscribeRealtime();
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      allCaptures = [];
-      if (realtimeChannel) { db.removeChannel(realtimeChannel); realtimeChannel = null; }
-      showAuth();
-    }
-  });
+  bindRoomsScreenEvents();
+  bindRoomScreenEvents();
+  bindModalEvents();
+  await ensureTestRoom();
+  await loadRooms();
 });
 
-// ── 인증 ───────────────────────────────────────────────────────────────────
-let authMode = 'login';
-
-function bindAuthEvents() {
-  document.querySelectorAll('.auth-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      authMode = tab.dataset.tab;
-      document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === authMode));
-      document.getElementById('auth-submit').textContent = authMode === 'login' ? '로그인' : '회원가입';
-      document.getElementById('auth-name-wrap').classList.toggle('hidden', authMode === 'login');
-      document.getElementById('auth-error').classList.add('hidden');
-      document.getElementById('auth-notice').classList.add('hidden');
-    });
-  });
-
-  document.getElementById('auth-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const errEl = document.getElementById('auth-error');
-    const noticeEl = document.getElementById('auth-notice');
-    const btn = document.getElementById('auth-submit');
-
-    errEl.classList.add('hidden');
-    noticeEl.classList.add('hidden');
-    btn.disabled = true;
-    btn.textContent = authMode === 'login' ? '로그인 중…' : '가입 중…';
-
-    try {
-      if (authMode === 'login') {
-        const { error } = await db.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-      } else {
-        const name = document.getElementById('auth-name').value.trim() || email.split('@')[0];
-        const { error } = await db.auth.signUp({
-          email, password,
-          options: { data: { display_name: name } },
-        });
-        if (error) throw error;
-        noticeEl.textContent = '가입 완료! 이메일 인증 링크를 확인하거나, 이메일 인증이 비활성화된 경우 바로 로그인하세요.';
-        noticeEl.classList.remove('hidden');
-      }
-    } catch (err) {
-      errEl.textContent = err.message;
-      errEl.classList.remove('hidden');
-    } finally {
-      btn.disabled = false;
-      btn.textContent = authMode === 'login' ? '로그인' : '회원가입';
+// ── 테스트 방 자동 생성 ──────────────────────────────────────────────────────
+async function ensureTestRoom() {
+  try {
+    const { data } = await db.from('rooms').select('id').eq('room_name', TEST_ROOM_NAME);
+    if (!data || data.length === 0) {
+      await db.from('rooms').insert({
+        room_name: TEST_ROOM_NAME,
+        room_password: TEST_ROOM_PASSWORD,
+        created_by: 'QASS 시스템',
+      });
     }
+  } catch (_) {}
+}
+
+// ── 방 목록 ──────────────────────────────────────────────────────────────────
+async function loadRooms() {
+  const grid = document.getElementById('rooms-grid');
+  grid.innerHTML = '<div class="empty-state">불러오는 중…</div>';
+  try {
+    const { data, error } = await db
+      .from('rooms')
+      .select('id, room_name, created_by, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    renderRooms(data || []);
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state">오류: ${esc(err.message)}</div>`;
+  }
+}
+
+function renderRooms(rooms) {
+  const grid = document.getElementById('rooms-grid');
+  grid.innerHTML = '';
+  if (!rooms.length) {
+    grid.innerHTML = '<div class="empty-state">아직 방이 없습니다.<br>첫 번째 방을 만들어보세요!</div>';
+    return;
+  }
+  rooms.forEach(room => {
+    const card = document.createElement('div');
+    card.className = 'room-card';
+    const isTest = room.room_name === TEST_ROOM_NAME;
+    const date = room.created_at ? new Date(room.created_at).toLocaleDateString('ko-KR') : '';
+    card.innerHTML = `
+      <div class="room-card-icon">${isTest ? '🧪' : '📁'}</div>
+      <div class="room-card-info">
+        <div class="room-card-name">${esc(room.room_name)}${isTest ? ' <span class="test-badge">테스트</span>' : ''}</div>
+        <div class="room-card-meta">만든이: ${esc(room.created_by || '익명')} · ${date}</div>
+      </div>
+      <button class="btn-sm btn-primary room-enter-btn">입장 →</button>
+    `;
+    card.querySelector('.room-enter-btn').addEventListener('click', () => openEnterModal(room, isTest));
+    grid.appendChild(card);
   });
 }
 
-// ── 대시보드 이벤트 ────────────────────────────────────────────────────────
-function bindDashboardEvents() {
-  document.getElementById('btn-logout').addEventListener('click', () => db.auth.signOut());
+// ── 방 만들기 이벤트 ──────────────────────────────────────────────────────────
+function bindRoomsScreenEvents() {
+  document.getElementById('btn-create-room').addEventListener('click', () => {
+    document.getElementById('create-room-modal').classList.remove('hidden');
+    document.getElementById('new-room-name').focus();
+  });
+}
+
+async function onCreateRoomSubmit() {
+  const name = document.getElementById('new-room-name').value.trim();
+  const password = document.getElementById('new-room-password').value.trim();
+  const creator = document.getElementById('new-room-creator').value.trim() || '익명';
+  const errEl = document.getElementById('create-room-error');
+  const btn = document.getElementById('btn-create-room-submit');
+
+  errEl.classList.add('hidden');
+  if (!name) { showErr(errEl, '방 이름을 입력하세요.'); return; }
+  if (!password) { showErr(errEl, '비밀번호를 입력하세요.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '만드는 중…';
+  try {
+    const { data, error } = await db.from('rooms')
+      .insert({ room_name: name, room_password: password, created_by: creator })
+      .select('id, room_name, created_by, created_at')
+      .single();
+    if (error) throw error;
+    closeCreateModal();
+    await loadRooms();
+    enterRoom(data, creator);
+  } catch (err) {
+    showErr(errEl, err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '방 만들기';
+  }
+}
+
+function closeCreateModal() {
+  document.getElementById('create-room-modal').classList.add('hidden');
+  ['new-room-name', 'new-room-password', 'new-room-creator'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('create-room-error').classList.add('hidden');
+}
+
+// ── 방 입장 ───────────────────────────────────────────────────────────────────
+function openEnterModal(room, isTest = false) {
+  pendingRoom = room;
+  document.getElementById('enter-room-title').textContent = `"${room.room_name}" 입장`;
+  document.getElementById('enter-room-password').value = '';
+  document.getElementById('enter-uploader-name').value = '';
+  document.getElementById('enter-room-error').classList.add('hidden');
+  if (isTest) {
+    document.getElementById('enter-room-password').value = TEST_ROOM_PASSWORD;
+    document.getElementById('enter-uploader-name').placeholder = '내 이름 (예: 테스트 사용자)';
+  }
+  document.getElementById('enter-room-modal').classList.remove('hidden');
+  const focusEl = isTest
+    ? document.getElementById('enter-uploader-name')
+    : document.getElementById('enter-room-password');
+  focusEl.focus();
+}
+
+async function onEnterRoomSubmit() {
+  if (!pendingRoom) return;
+  const password = document.getElementById('enter-room-password').value;
+  const uploaderName = document.getElementById('enter-uploader-name').value.trim() || '익명';
+  const errEl = document.getElementById('enter-room-error');
+  errEl.classList.add('hidden');
+
+  if (!password) { showErr(errEl, '비밀번호를 입력하세요.'); return; }
+
+  const btn = document.getElementById('btn-enter-room-submit');
+  btn.disabled = true;
+  btn.textContent = '확인 중…';
+
+  try {
+    const { data: roomData, error } = await db
+      .from('rooms')
+      .select('id, room_name, room_password')
+      .eq('id', pendingRoom.id)
+      .single();
+    if (error || !roomData) throw new Error('방 정보를 불러올 수 없습니다.');
+    if (password !== roomData.room_password) throw new Error('비밀번호가 올바르지 않습니다.');
+
+    document.getElementById('enter-room-modal').classList.add('hidden');
+    const room = pendingRoom;
+    pendingRoom = null;
+    enterRoom(room, uploaderName);
+  } catch (err) {
+    showErr(errEl, err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '입장';
+  }
+}
+
+function enterRoom(room, uploaderName) {
+  currentRoom = room;
+  currentUploaderName = uploaderName;
+
+  document.getElementById('room-name-label').textContent = room.room_name;
+  document.getElementById('uploader-badge').textContent = `👤 ${uploaderName}`;
+  document.getElementById('rooms-screen').classList.add('hidden');
+  document.getElementById('room-screen').classList.remove('hidden');
+
+  allCaptures = [];
+  loadRoomCaptures();
+  subscribeRealtime();
+}
+
+// ── 방 내부 이벤트 ────────────────────────────────────────────────────────────
+function bindRoomScreenEvents() {
+  document.getElementById('btn-back').addEventListener('click', () => {
+    if (realtimeChannel) { db.removeChannel(realtimeChannel); realtimeChannel = null; }
+    currentRoom = null;
+    document.getElementById('room-screen').classList.add('hidden');
+    document.getElementById('rooms-screen').classList.remove('hidden');
+    loadRooms();
+  });
   document.getElementById('search').addEventListener('input', renderFiltered);
   document.getElementById('filter-user').addEventListener('change', renderFiltered);
-  document.getElementById('btn-dl-zip').addEventListener('click', downloadZip);
-  document.getElementById('btn-close-modal').addEventListener('click', () => {
-    document.getElementById('ext-modal').classList.add('hidden');
+  document.getElementById('btn-dl-zip').addEventListener('click', downloadRoomZip);
+}
+
+// ── 모달 이벤트 바인딩 ────────────────────────────────────────────────────────
+function bindModalEvents() {
+  document.getElementById('btn-create-room-submit').addEventListener('click', onCreateRoomSubmit);
+  document.getElementById('btn-create-room-cancel').addEventListener('click', closeCreateModal);
+  document.getElementById('btn-enter-room-submit').addEventListener('click', onEnterRoomSubmit);
+  document.getElementById('btn-enter-room-cancel').addEventListener('click', () => {
+    document.getElementById('enter-room-modal').classList.add('hidden');
+    pendingRoom = null;
+  });
+  document.getElementById('btn-test-hint').addEventListener('click', () => {
+    document.getElementById('enter-room-password').value = TEST_ROOM_PASSWORD;
+    if (!document.getElementById('enter-uploader-name').value) {
+      document.getElementById('enter-uploader-name').value = '테스트 사용자';
+    }
+    document.getElementById('enter-uploader-name').focus();
+  });
+  document.getElementById('enter-room-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('enter-uploader-name').focus();
+  });
+  document.getElementById('enter-uploader-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') onEnterRoomSubmit();
+  });
+  document.getElementById('new-room-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('new-room-password').focus();
+  });
+  document.getElementById('new-room-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('new-room-creator').focus();
+  });
+  document.getElementById('new-room-creator').addEventListener('keydown', e => {
+    if (e.key === 'Enter') onCreateRoomSubmit();
   });
 }
 
-// ── 캡처 목록 로드 ─────────────────────────────────────────────────────────
-async function loadCaptures() {
+// ── 캡처 로드 ─────────────────────────────────────────────────────────────────
+async function loadRoomCaptures() {
+  if (!currentRoom) return;
   setLoading(true);
   try {
     const { data, error } = await db
       .from('captures')
       .select('*')
+      .eq('room_id', currentRoom.id)
       .order('captured_at', { ascending: false });
-
     if (error) throw error;
     allCaptures = data || [];
     buildUserFilter();
@@ -124,23 +260,28 @@ async function loadCaptures() {
 }
 
 function buildUserFilter() {
-  const users = [...new Set(allCaptures.map(c => c.user_email).filter(Boolean))];
+  const names = [...new Set(
+    allCaptures.map(c => c.uploader_name || c.user_display_name || c.user_email).filter(Boolean)
+  )];
   const select = document.getElementById('filter-user');
   const prev = select.value;
-  select.innerHTML = '<option value="">전체 사용자</option>';
-  users.forEach(u => {
+  select.innerHTML = '<option value="">전체 업로더</option>';
+  names.forEach(n => {
     const opt = document.createElement('option');
-    opt.value = u;
-    opt.textContent = u;
-    if (u === prev) opt.selected = true;
+    opt.value = n; opt.textContent = n;
+    if (n === prev) opt.selected = true;
     select.appendChild(opt);
   });
 }
 
-// ── 실시간 구독 ────────────────────────────────────────────────────────────
+// ── 실시간 구독 ───────────────────────────────────────────────────────────────
 function subscribeRealtime() {
-  realtimeChannel = db.channel('captures-realtime')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'captures' }, payload => {
+  if (!currentRoom) return;
+  realtimeChannel = db.channel(`room-${currentRoom.id}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'captures',
+      filter: `room_id=eq.${currentRoom.id}`,
+    }, payload => {
       allCaptures.unshift(payload.new);
       buildUserFilter();
       renderFiltered();
@@ -154,19 +295,17 @@ function subscribeRealtime() {
     });
 }
 
-// ── 렌더링 ─────────────────────────────────────────────────────────────────
+// ── 렌더링 ────────────────────────────────────────────────────────────────────
 function renderFiltered() {
   const search = document.getElementById('search').value.toLowerCase();
   const filterUser = document.getElementById('filter-user').value;
-
   const filtered = allCaptures.filter(c => {
     const matchSearch = !search ||
       (c.title || '').toLowerCase().includes(search) ||
       (c.url || '').toLowerCase().includes(search);
-    const matchUser = !filterUser || c.user_email === filterUser;
-    return matchSearch && matchUser;
+    const name = c.uploader_name || c.user_display_name || c.user_email || '';
+    return matchSearch && (!filterUser || name === filterUser);
   });
-
   document.getElementById('count-label').textContent = `${filtered.length}건`;
   renderGrid(filtered);
 }
@@ -174,60 +313,49 @@ function renderFiltered() {
 function renderGrid(captures) {
   const grid = document.getElementById('captures-grid');
   grid.innerHTML = '';
-
-  if (captures.length === 0) {
-    grid.innerHTML = '<div class="empty-state">캡처된 증적이 없습니다.</div>';
+  if (!captures.length) {
+    grid.innerHTML = '<div class="empty-state">캡처된 증적이 없습니다.<br><small>확장 프로그램에서 이 방에 업로드하면 여기에 표시됩니다.</small></div>';
     return;
   }
-
   captures.forEach(cap => {
     const card = document.createElement('div');
     card.className = 'capture-card';
-
     const imgUrl = getPublicUrl(cap.image_path);
-    const isMe = cap.user_id === currentUser?.id;
-    const displayName = cap.user_display_name || cap.user_email || '—';
+    const name = cap.uploader_name || cap.user_display_name || cap.user_email || '—';
     const time = cap.captured_at ? new Date(cap.captured_at).toLocaleString('ko-KR') : '—';
-
     card.innerHTML = `
       <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기"></div>
       <div class="card-body">
         <div class="card-title" title="${esc(cap.title || '')}">${esc(cap.title || '—')}</div>
         <div class="card-url" title="${esc(cap.url || '')}">${esc(cap.url || '—')}</div>
         <div class="card-meta">
-          <span class="badge-user${isMe ? ' me' : ''}">${esc(displayName)}</span>
+          <span class="badge-user">${esc(name)}</span>
           <span class="card-time">${time}</span>
-          ${cap.capture_count > 1 ? `<span class="card-pieces">${cap.capture_count}조각</span>` : ''}
+          ${(cap.capture_count || 0) > 1 ? `<span class="card-pieces">${cap.capture_count}조각</span>` : ''}
         </div>
       </div>
       <div class="card-actions">
         <button class="btn-sm" data-action="view">보기</button>
         <button class="btn-sm btn-primary" data-action="dl">저장</button>
-        ${isMe ? '<button class="btn-sm btn-danger" data-action="del">삭제</button>' : ''}
+        <button class="btn-sm btn-danger" data-action="del">삭제</button>
       </div>
     `;
-
-    card.querySelector('.card-thumb').addEventListener('click', () => openCapture(imgUrl));
-    card.querySelector('[data-action="view"]').addEventListener('click', () => openCapture(imgUrl));
+    card.querySelector('.card-thumb').addEventListener('click', () => window.open(imgUrl, '_blank'));
+    card.querySelector('[data-action="view"]').addEventListener('click', () => window.open(imgUrl, '_blank'));
     card.querySelector('[data-action="dl"]').addEventListener('click', () => downloadCapture(cap));
-    card.querySelector('[data-action="del"]')?.addEventListener('click', () => deleteCapture(cap));
-
+    card.querySelector('[data-action="del"]').addEventListener('click', () => deleteCapture(cap));
     grid.appendChild(card);
   });
 }
 
-// ── 이미지 URL ─────────────────────────────────────────────────────────────
+// ── 이미지 URL ────────────────────────────────────────────────────────────────
 function getPublicUrl(path) {
   if (!path) return '';
   const { data } = db.storage.from('qa-captures').getPublicUrl(path);
   return data.publicUrl;
 }
 
-// ── 액션 ───────────────────────────────────────────────────────────────────
-function openCapture(url) {
-  window.open(url, '_blank');
-}
-
+// ── 액션 ─────────────────────────────────────────────────────────────────────
 async function downloadCapture(cap) {
   const url = getPublicUrl(cap.image_path);
   const res = await fetch(url);
@@ -239,19 +367,19 @@ async function downloadCapture(cap) {
   URL.revokeObjectURL(a.href);
 }
 
-async function downloadZip() {
+async function downloadRoomZip() {
   const search = document.getElementById('search').value.toLowerCase();
   const filterUser = document.getElementById('filter-user').value;
   const filtered = allCaptures.filter(c => {
     const matchSearch = !search ||
       (c.title || '').toLowerCase().includes(search) ||
       (c.url || '').toLowerCase().includes(search);
-    return matchSearch && (!filterUser || c.user_email === filterUser);
+    const name = c.uploader_name || c.user_display_name || c.user_email || '';
+    return matchSearch && (!filterUser || name === filterUser);
   });
 
   if (!filtered.length) return;
   setLoading(true);
-
   try {
     const zip = new JSZip();
     for (const cap of filtered) {
@@ -262,7 +390,8 @@ async function downloadZip() {
     const content = await zip.generateAsync({ type: 'blob' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(content);
-    a.download = `QASS_증적_${new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g, '-').replace(/-$/, '')}.zip`;
+    const roomName = (currentRoom?.room_name || 'QASS').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = `QASS_${roomName}_${new Date().toLocaleDateString('ko-KR').replace(/\.\s*/g, '-').replace(/-$/, '')}.zip`;
     a.click();
     URL.revokeObjectURL(a.href);
   } catch (err) {
@@ -290,21 +419,14 @@ async function deleteCapture(cap) {
   }
 }
 
-// ── 유틸 ───────────────────────────────────────────────────────────────────
-function showAuth() {
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('dashboard').classList.add('hidden');
-}
-
-function showDashboard() {
-  document.getElementById('auth-screen').classList.add('hidden');
-  document.getElementById('dashboard').classList.remove('hidden');
-  const name = currentUser?.user_metadata?.display_name || currentUser?.email || '';
-  document.getElementById('user-email').textContent = name;
-}
-
+// ── 유틸 ─────────────────────────────────────────────────────────────────────
 function setLoading(v) {
   document.getElementById('loading').classList.toggle('hidden', !v);
+}
+
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.classList.remove('hidden');
 }
 
 function esc(s) {
@@ -317,7 +439,6 @@ function esc(s) {
 
 function makeFileName(title, timestamp) {
   const safe = (title || 'capture').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
-  const ts = new Date(timestamp || Date.now())
-    .toLocaleString('ko-KR').replace(/[^0-9]/g, '').slice(0, 14);
+  const ts = new Date(timestamp || Date.now()).toLocaleString('ko-KR').replace(/[^0-9]/g, '').slice(0, 14);
   return `QA_${safe}_${ts}.png`;
 }

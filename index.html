@@ -8,47 +8,48 @@
 </head>
 <body>
 
-  <!-- 인증 화면 -->
-  <div id="auth-screen" class="auth-screen hidden">
-    <div class="auth-card">
-      <div class="auth-logo">QASS</div>
-      <p class="auth-subtitle">QA 증적 관리 플랫폼</p>
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-tab="login">로그인</button>
-        <button class="auth-tab" data-tab="signup">회원가입</button>
-      </div>
-      <form id="auth-form">
-        <input type="email" id="auth-email" placeholder="이메일" required autocomplete="email" />
-        <input type="password" id="auth-password" placeholder="비밀번호" required autocomplete="current-password" />
-        <div id="auth-name-wrap" class="hidden">
-          <input type="text" id="auth-name" placeholder="이름 (팀원에게 표시될 이름)" autocomplete="name" />
-        </div>
-        <button type="submit" class="btn-auth" id="auth-submit">로그인</button>
-        <p id="auth-error" class="auth-error hidden"></p>
-        <p id="auth-notice" class="auth-notice hidden"></p>
-      </form>
-    </div>
-  </div>
-
-  <!-- 대시보드 -->
-  <div id="dashboard" class="hidden">
+  <!-- 방 목록 화면 -->
+  <div id="rooms-screen">
     <header class="topbar">
       <div class="topbar-brand">QASS</div>
       <div class="topbar-center">
+        <span class="topbar-subtitle">QA 증적 관리 플랫폼</span>
+      </div>
+      <div class="topbar-right">
+        <button id="btn-create-room" class="btn-sm btn-primary">+ 방 만들기</button>
+      </div>
+    </header>
+
+    <div class="rooms-hero">
+      <h1 class="rooms-hero-title">QA 증적 방 목록</h1>
+      <p class="rooms-hero-sub">방을 선택해 입장하거나, 새 방을 만들어 팀과 함께 증적을 관리하세요.</p>
+    </div>
+
+    <div id="rooms-grid" class="rooms-grid">
+      <div class="empty-state">방 목록을 불러오는 중…</div>
+    </div>
+  </div>
+
+  <!-- 방 내부 화면 -->
+  <div id="room-screen" class="hidden">
+    <header class="topbar">
+      <div class="topbar-brand">QASS</div>
+      <div class="topbar-center">
+        <span id="room-name-label" class="room-name-label"></span>
         <span id="realtime-badge" class="realtime-badge hidden">● 실시간 연결됨</span>
       </div>
       <div class="topbar-right">
-        <span id="user-email" class="user-email-label"></span>
-        <button id="btn-logout" class="btn-sm">로그아웃</button>
+        <span id="uploader-badge" class="uploader-badge"></span>
+        <button id="btn-dl-zip" class="btn-sm btn-primary">⬇ ZIP 다운로드</button>
+        <button id="btn-back" class="btn-sm">← 방 목록</button>
       </div>
     </header>
 
     <div class="toolbar">
       <input type="text" id="search" class="search-input" placeholder="URL 또는 페이지 제목으로 검색…" />
       <select id="filter-user" class="filter-select">
-        <option value="">전체 사용자</option>
+        <option value="">전체 업로더</option>
       </select>
-      <button id="btn-dl-zip" class="btn-sm btn-primary">⬇ ZIP 다운로드</button>
       <span id="count-label" class="count-label">불러오는 중…</span>
     </div>
 
@@ -57,24 +58,43 @@
     </div>
   </div>
 
+  <!-- 방 만들기 모달 -->
+  <div id="create-room-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2>새 방 만들기</h2>
+      <p>방 이름과 비밀번호를 설정하세요.<br>팀원들과 비밀번호를 공유하면 함께 사용할 수 있습니다.</p>
+      <input type="text" id="new-room-name" placeholder="방 이름 (예: 1차 QA, 로그인 화면 테스트)" maxlength="50" />
+      <input type="password" id="new-room-password" placeholder="비밀번호" />
+      <input type="text" id="new-room-creator" placeholder="만든 사람 이름 (선택)" />
+      <p id="create-room-error" class="auth-error hidden"></p>
+      <div class="modal-actions">
+        <button id="btn-create-room-submit" class="btn-auth">방 만들기</button>
+        <button id="btn-create-room-cancel" class="btn-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 방 입장 모달 -->
+  <div id="enter-room-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h2 id="enter-room-title">방 입장</h2>
+      <p>비밀번호와 내 이름을 입력하세요.<br>이름은 업로드 시 캡처에 표시됩니다.</p>
+      <div class="input-hint-row">
+        <input type="password" id="enter-room-password" placeholder="비밀번호" />
+        <button id="btn-test-hint" class="btn-hint" title="테스트 방 자동 입력">?</button>
+      </div>
+      <input type="text" id="enter-uploader-name" placeholder="내 이름 (예: 김QA, PL홍길동)" maxlength="30" />
+      <p id="enter-room-error" class="auth-error hidden"></p>
+      <div class="modal-actions">
+        <button id="btn-enter-room-submit" class="btn-auth">입장</button>
+        <button id="btn-enter-room-cancel" class="btn-cancel">취소</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 로딩 오버레이 -->
   <div id="loading" class="loading-overlay hidden">
     <div class="spinner"></div>
-  </div>
-
-  <!-- 확장 설치 안내 모달 -->
-  <div id="ext-modal" class="modal-overlay hidden">
-    <div class="modal-card">
-      <h2>확장 프로그램 설치 안내</h2>
-      <p>QASS 확장 프로그램을 설치하면 브라우저에서 QA 화면을 캡처하고<br>자동으로 이 대시보드에 업로드할 수 있습니다.</p>
-      <ol class="ext-steps">
-        <li>확장 프로그램 파일을 다운로드합니다.</li>
-        <li>Chrome → 확장 프로그램 → 개발자 모드 ON</li>
-        <li>압축 해제된 폴더를 드래그하거나 "압축 해제된 확장 프로그램 로드"를 클릭합니다.</li>
-        <li>확장 팝업에서 이 계정으로 로그인합니다.</li>
-      </ol>
-      <button id="btn-close-modal" class="btn-auth" style="margin-top:8px;">확인</button>
-    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>

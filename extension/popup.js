@@ -1,7 +1,10 @@
 'use strict';
 
 const SUPABASE_URL = 'https://snjexfohyklviarxprvm.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_c_1296S0EE8eHZO2EHnTIg_F2v4mov9';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNuamV4Zm9oeWtsdmlhcnhwcnZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3MDgwODgsImV4cCI6MjA5MzI4NDA4OH0.jxiiBLM4hyGwoJ7U4RC_M1Laqm0z8T0jHpmU3LlVW3k';
+
+const TEST_ROOM_NAME = 'QASS 테스트 방';
+const TEST_ROOM_PASSWORD = 'qass1234';
 
 let isCapturing = false;
 let cachedHistory = [];
@@ -11,69 +14,97 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-toggle').addEventListener('click', onToggle);
   document.getElementById('btn-clear').addEventListener('click', onClear);
   document.getElementById('btn-dl-all').addEventListener('click', onDownloadAll);
-  document.getElementById('btn-ext-login').addEventListener('click', onExtLogin);
-  document.getElementById('btn-ext-logout').addEventListener('click', onExtLogout);
+  document.getElementById('btn-room-connect').addEventListener('click', onRoomConnect);
+  document.getElementById('btn-room-disconnect').addEventListener('click', onRoomDisconnect);
+  document.getElementById('btn-ext-test-hint').addEventListener('click', () => {
+    document.getElementById('ext-room-name').value = TEST_ROOM_NAME;
+    document.getElementById('ext-room-password').value = TEST_ROOM_PASSWORD;
+    if (!document.getElementById('ext-uploader-name').value) {
+      document.getElementById('ext-uploader-name').value = '테스트 사용자';
+    }
+    document.getElementById('ext-uploader-name').focus();
+  });
+
+  document.getElementById('ext-room-password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('ext-uploader-name').focus();
+  });
+  document.getElementById('ext-uploader-name').addEventListener('keydown', e => {
+    if (e.key === 'Enter') onRoomConnect();
+  });
 
   const resp = await chrome.runtime.sendMessage({ type: 'GET_STATUS' });
   isCapturing = resp.isCapturing;
   updateUI();
   await loadHistory();
-  await updateCloudUI();
+  await updateRoomUI();
 });
 
-// ── 클라우드 인증 UI ──────────────────────────────────────────────────────────
-async function updateCloudUI() {
-  const { supabaseSession } = await chrome.storage.local.get('supabaseSession');
-  const loggedIn = !!supabaseSession?.user;
-  document.getElementById('cloud-logged-in').classList.toggle('hidden', !loggedIn);
-  document.getElementById('cloud-login-form').classList.toggle('hidden', loggedIn);
-  if (loggedIn) {
-    const label = supabaseSession.user.user_metadata?.display_name || supabaseSession.user.email;
-    document.getElementById('cloud-user-label').textContent = label;
+// ── 방 연결 UI ────────────────────────────────────────────────────────────────
+async function updateRoomUI() {
+  const { roomSession } = await chrome.storage.local.get('roomSession');
+  const connected = !!(roomSession?.room_id);
+  document.getElementById('room-connected').classList.toggle('hidden', !connected);
+  document.getElementById('room-connect-form').classList.toggle('hidden', connected);
+  if (connected) {
+    document.getElementById('connected-room-name').textContent = roomSession.room_name;
+    document.getElementById('connected-uploader').textContent = `👤 ${roomSession.uploader_name}`;
   }
 }
 
-async function onExtLogin() {
-  const email = document.getElementById('ext-email').value.trim();
-  const password = document.getElementById('ext-password').value;
-  const errEl = document.getElementById('ext-auth-error');
-  const btn = document.getElementById('btn-ext-login');
+async function onRoomConnect() {
+  const roomName = document.getElementById('ext-room-name').value.trim();
+  const password = document.getElementById('ext-room-password').value.trim();
+  const uploaderName = document.getElementById('ext-uploader-name').value.trim() || '익명';
+  const errEl = document.getElementById('ext-connect-error');
+  const btn = document.getElementById('btn-room-connect');
   errEl.classList.add('hidden');
 
-  if (!email || !password) return;
+  if (!roomName) { showExtErr(errEl, '방 이름을 입력하세요.'); return; }
+  if (!password) { showExtErr(errEl, '비밀번호를 입력하세요.'); return; }
 
-  btn.textContent = '로그인 중…';
+  btn.textContent = '확인 중…';
   btn.disabled = true;
 
   try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'apikey': SUPABASE_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error_description || data.msg || '로그인 실패');
+    // Supabase REST로 방 조회
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/rooms?room_name=eq.${encodeURIComponent(roomName)}&select=id,room_name,room_password`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+      }
+    );
+    const rooms = await res.json();
+    if (!res.ok) throw new Error(rooms.message || '방 조회 실패');
+    if (!rooms || rooms.length === 0) throw new Error(`"${roomName}" 방을 찾을 수 없습니다.`);
+
+    const room = rooms[0];
+    if (password !== room.room_password) throw new Error('비밀번호가 올바르지 않습니다.');
 
     await chrome.storage.local.set({
-      supabaseSession: {
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        user: data.user,
+      roomSession: {
+        room_id: room.id,
+        room_name: room.room_name,
+        uploader_name: uploaderName,
       },
     });
-    await updateCloudUI();
+    document.getElementById('ext-room-name').value = '';
+    document.getElementById('ext-room-password').value = '';
+    document.getElementById('ext-uploader-name').value = '';
+    await updateRoomUI();
   } catch (e) {
-    errEl.textContent = e.message;
-    errEl.classList.remove('hidden');
+    showExtErr(errEl, e.message);
   } finally {
-    btn.textContent = '로그인';
+    btn.textContent = '연결';
     btn.disabled = false;
   }
 }
 
-async function onExtLogout() {
-  await chrome.storage.local.remove('supabaseSession');
-  await updateCloudUI();
+async function onRoomDisconnect() {
+  await chrome.storage.local.remove('roomSession');
+  await updateRoomUI();
 }
 
 // ── 캡처 토글 ─────────────────────────────────────────────────────────────────
@@ -81,9 +112,7 @@ async function onToggle() {
   isCapturing = !isCapturing;
   await chrome.runtime.sendMessage({ type: 'SET_CAPTURING', value: isCapturing });
   updateUI();
-  if (!isCapturing) {
-    setTimeout(loadHistory, 1200);
-  }
+  if (!isCapturing) setTimeout(loadHistory, 1200);
 }
 
 async function onClear() {
@@ -105,15 +134,12 @@ function updateUI() {
   const btn = document.getElementById('btn-toggle');
   const bar = document.getElementById('status-bar');
   const txt = document.getElementById('status-text');
-
   if (isCapturing) {
-    btn.textContent = '■ 종료';
-    btn.className = 'btn-stop';
+    btn.textContent = '■ 종료'; btn.className = 'btn-stop';
     bar.className = 'status-bar running';
     txt.textContent = '캡처 중 — 탭 이동 및 스크롤 시 자동 캡처됩니다';
   } else {
-    btn.textContent = '▶ 시작';
-    btn.className = 'btn-start';
+    btn.textContent = '▶ 시작'; btn.className = 'btn-start';
     bar.className = 'status-bar stopped';
     txt.textContent = '대기 중 — 시작 버튼을 누르면 탭 이동 시 자동 캡처됩니다';
   }
@@ -128,15 +154,13 @@ async function loadHistory() {
 function renderList(history) {
   const list = document.getElementById('list');
   list.innerHTML = '';
-
-  if (!history || history.length === 0) {
+  if (!history || !history.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-msg';
     empty.textContent = '캡처된 페이지가 없습니다.';
     list.appendChild(empty);
     return;
   }
-
   history.forEach(rec => {
     const item = document.createElement('div');
     item.className = 'capture-item';
@@ -161,22 +185,16 @@ function renderList(history) {
     infoEl.className = 'item-info';
     infoEl.textContent = rec.timestamp + ' · ' + rec.captureCount + '개 조각';
 
-    // 클라우드 업로드 상태 배지
     const badge = document.createElement('span');
     badge.className = 'cloud-badge';
-    if (rec.uploaded === true) {
-      badge.className += ' uploaded';
-      badge.textContent = '☁ 업로드됨';
+    if (rec.uploaded) {
+      badge.className += ' uploaded'; badge.textContent = '☁ 업로드됨';
     } else if (rec.uploading) {
-      badge.className += ' uploading';
-      badge.textContent = '↑ 업로드 중';
+      badge.className += ' uploading'; badge.textContent = '↑ 업로드 중';
     } else if (rec.uploadFailed) {
-      badge.className += ' failed';
-      badge.textContent = '✕ 업로드 실패';
+      badge.className += ' failed'; badge.textContent = '✕ 업로드 실패';
     }
-    if (rec.uploaded || rec.uploading || rec.uploadFailed) {
-      infoEl.appendChild(badge);
-    }
+    if (rec.uploaded || rec.uploading || rec.uploadFailed) infoEl.appendChild(badge);
 
     meta.appendChild(titleEl);
     meta.appendChild(urlEl);
@@ -212,19 +230,14 @@ function renderList(history) {
   });
 }
 
-// ── 전체 이미지 보기 ──────────────────────────────────────────────────────────
 function openFullView(id) {
   const rec = cachedHistory.find(r => String(r.id) === String(id));
   if (!rec) return;
-  fetch(rec.dataUrl)
-    .then(r => r.blob())
-    .then(blob => {
-      const url = URL.createObjectURL(blob);
-      chrome.tabs.create({ url });
-    });
+  fetch(rec.dataUrl).then(r => r.blob()).then(blob => {
+    chrome.tabs.create({ url: URL.createObjectURL(blob) });
+  });
 }
 
-// ── 다운로드 ──────────────────────────────────────────────────────────────────
 function onDownloadOne(id) {
   const rec = cachedHistory.find(r => String(r.id) === String(id));
   if (!rec) return;
@@ -233,8 +246,7 @@ function onDownloadOne(id) {
 
 function triggerDownload(dataUrl, fileName) {
   const a = document.createElement('a');
-  a.href = dataUrl;
-  a.download = fileName;
+  a.href = dataUrl; a.download = fileName;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -244,4 +256,9 @@ function makeFileName(title, timestamp) {
   const safe = (title || 'capture').replace(/[\\/:*?"<>|]/g, '_').slice(0, 40);
   const ts = (timestamp || '').replace(/[^0-9]/g, '').slice(0, 14);
   return 'QA_' + safe + '_' + ts + '.png';
+}
+
+function showExtErr(el, msg) {
+  el.textContent = msg;
+  el.classList.remove('hidden');
 }
