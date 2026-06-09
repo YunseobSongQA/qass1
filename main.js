@@ -273,12 +273,14 @@ function enterRoom(room, uploaderName) {
 
 // ── 방 내부 이벤트 ────────────────────────────────────────────────────────────
 function bindRoomScreenEvents() {
-  document.getElementById('btn-back').addEventListener('click', () => {
+  const goHome = () => {
     if (realtimeChannel) { db.removeChannel(realtimeChannel); realtimeChannel = null; }
     currentRoom = null;
     showScreen('rooms');
     loadRooms();
-  });
+  };
+  document.getElementById('btn-back').addEventListener('click', goHome);
+  document.getElementById('btn-brand-home').addEventListener('click', goHome);
   document.getElementById('search').addEventListener('input', renderFiltered);
   document.getElementById('filter-user').addEventListener('change', renderFiltered);
   document.getElementById('btn-dl-zip').addEventListener('click', downloadRoomZip);
