@@ -131,6 +131,19 @@ body {
 .btn-connect:hover { background: #2563eb; }
 .btn-connect:disabled { opacity: .6; cursor: not-allowed; }
 
+.btn-create { background: #22c55e; }
+.btn-create:hover { background: #16a34a; }
+
+.ext-mode-toggle {
+  font-size: 11px;
+  color: #94a3b8;
+  text-align: center;
+  text-decoration: none;
+  padding: 2px 0;
+}
+
+.ext-mode-toggle:hover { color: #cbd5e1; text-decoration: underline; }
+
 .ext-error {
   font-size: 11px;
   color: #f87171;

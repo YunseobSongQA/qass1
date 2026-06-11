@@ -20,9 +20,9 @@
       <button id="btn-room-disconnect" class="btn-disconnect">연결 해제</button>
     </div>
 
-    <!-- 방 연결 폼 -->
+    <!-- 방 연결/만들기 폼 -->
     <div id="room-connect-form" class="room-connect-form">
-      <div class="room-connect-title">📁 방에 연결하여 자동 업로드</div>
+      <div id="room-connect-title" class="room-connect-title">📁 방에 연결하여 자동 업로드</div>
       <input type="text" id="ext-room-name" placeholder="방 이름" autocomplete="off" />
       <div class="input-row">
         <input type="password" id="ext-room-password" placeholder="방 비밀번호" />
@@ -30,6 +30,8 @@
       </div>
       <input type="text" id="ext-uploader-name" placeholder="내 이름 (업로드 시 표시됨)" autocomplete="off" />
       <button id="btn-room-connect" class="btn-connect">연결</button>
+      <button id="btn-room-create" class="btn-connect btn-create hidden">방 만들기 + 연결</button>
+      <a id="ext-mode-toggle" href="#" class="ext-mode-toggle">처음이세요? + 새 방 만들기</a>
       <p id="ext-connect-error" class="ext-error hidden"></p>
     </div>
   </div>
