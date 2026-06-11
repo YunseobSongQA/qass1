@@ -109,6 +109,29 @@
     </div>
   </div>
 
+  <!-- 1차 자동 점검 (장애 보기) 모달 -->
+  <div id="issues-modal" class="modal-overlay hidden">
+    <div class="modal-card issues-modal-card">
+      <div class="issues-modal-head">
+        <h2 id="issues-modal-title">1차 자동 점검</h2>
+        <label class="overlay-toggle" title="오버레이 표시/숨김">
+          <input type="checkbox" id="issues-overlay-toggle" checked />
+          오버레이 표시
+        </label>
+        <button id="btn-issues-dl" class="btn-sm btn-primary">⬇ 원본 저장</button>
+        <button id="btn-issues-close" class="btn-sm">✕ 닫기</button>
+      </div>
+      <div class="issues-modal-body">
+        <div class="issues-image-pane">
+          <div id="issues-stage" class="issues-stage">
+            <img id="issues-image" alt="캡처 원본 이미지" />
+          </div>
+        </div>
+        <div id="issues-list" class="issues-list"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 로딩 오버레이 -->
   <div id="loading" class="loading-overlay hidden">
     <div class="spinner"></div>

@@ -318,6 +318,16 @@ function bindModalEvents() {
   document.getElementById('new-room-creator').addEventListener('keydown', e => {
     if (e.key === 'Enter') onCreateRoomSubmit();
   });
+  document.getElementById('btn-issues-close').addEventListener('click', closeIssuesModal);
+  document.getElementById('btn-issues-dl').addEventListener('click', () => {
+    if (issuesModalCap) downloadCapture(issuesModalCap);
+  });
+  document.getElementById('issues-overlay-toggle').addEventListener('change', e => {
+    document.getElementById('issues-stage').classList.toggle('overlay-off', !e.target.checked);
+  });
+  document.getElementById('issues-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeIssuesModal();
+  });
 }
 
 // ── 캡처 로드 ─────────────────────────────────────────────────────────────────
@@ -405,8 +415,11 @@ function renderGrid(captures) {
     const imgUrl = getPublicUrl(cap.image_path);
     const name = cap.uploader_name || cap.user_display_name || cap.user_email || '—';
     const time = cap.captured_at ? new Date(cap.captured_at).toLocaleString('ko-KR') : '—';
+    const issues = Array.isArray(cap.issues) ? cap.issues : [];
     card.innerHTML = `
-      <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기"></div>
+      <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기">
+        ${issues.length ? `<span class="badge-issues" title="자동 점검 이슈 ${issues.length}건 — 클릭하면 상세 보기">⚠${issues.length}</span>` : ''}
+      </div>
       <div class="card-body">
         <div class="card-title" title="${esc(cap.title || '')}">${esc(cap.title || '—')}</div>
         <div class="card-url" title="${esc(cap.url || '')}">${esc(cap.url || '—')}</div>
@@ -418,6 +431,7 @@ function renderGrid(captures) {
       </div>
       <div class="card-actions">
         <button class="btn-sm" data-action="view">보기</button>
+        ${issues.length ? '<button class="btn-sm btn-issues" data-action="issues">장애 보기</button>' : ''}
         <button class="btn-sm btn-primary" data-action="dl">저장</button>
         <button class="btn-sm btn-danger" data-action="del">삭제</button>
       </div>
@@ -426,6 +440,11 @@ function renderGrid(captures) {
     card.querySelector('[data-action="view"]').addEventListener('click', () => window.open(imgUrl, '_blank'));
     card.querySelector('[data-action="dl"]').addEventListener('click', () => downloadCapture(cap));
     card.querySelector('[data-action="del"]').addEventListener('click', () => deleteCapture(cap));
+    card.querySelector('[data-action="issues"]')?.addEventListener('click', () => openIssuesModal(cap));
+    card.querySelector('.badge-issues')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openIssuesModal(cap);
+    });
     grid.appendChild(card);
   });
 }
@@ -537,6 +556,89 @@ async function deleteCapture(cap) {
   } finally {
     setLoading(false);
   }
+}
+
+// ── 1차 자동 점검 (장애 보기) 모달 ───────────────────────────────────────────
+const ISSUE_TYPE_META = {
+  spacing: { label: '띄어쓰기', color: '#2563EB' },
+  spell:   { label: '맞춤법',  color: '#D97706' },
+  ui:      { label: 'UI장애',  color: '#E11D48' },
+};
+
+let issuesModalCap = null;
+
+function openIssuesModal(cap) {
+  issuesModalCap = cap;
+  const issues = Array.isArray(cap.issues) ? cap.issues : [];
+  document.getElementById('issues-modal-title').textContent =
+    `1차 자동 점검 — ${cap.title || cap.url || '캡처'} (${issues.length}건)`;
+
+  const stage = document.getElementById('issues-stage');
+  stage.querySelectorAll('.issue-box').forEach(el => el.remove());
+  stage.classList.remove('overlay-off');
+  document.getElementById('issues-overlay-toggle').checked = true;
+  document.getElementById('issues-image').src = getPublicUrl(cap.image_path);
+
+  const list = document.getElementById('issues-list');
+  list.innerHTML = '';
+
+  issues.forEach((issue, i) => {
+    const meta = ISSUE_TYPE_META[issue.type] || { label: issue.type || '기타', color: '#64748b' };
+    const num = i + 1;
+
+    // rectPct 가 없는(구버전) 캡처는 박스 없이 목록만 표시
+    if (issue.rectPct) {
+      const box = document.createElement('div');
+      box.className = 'issue-box';
+      box.dataset.idx = i;
+      box.style.left = issue.rectPct.x + '%';
+      box.style.top = issue.rectPct.y + '%';
+      box.style.width = issue.rectPct.w + '%';
+      box.style.height = issue.rectPct.h + '%';
+      box.style.borderColor = meta.color;
+      box.title = `${meta.label}: ${issue.message || ''}`;
+      box.innerHTML = `<span class="issue-box-num" style="background:${meta.color}">${num}</span>`;
+      box.addEventListener('click', () => highlightIssue(i, false));
+      stage.appendChild(box);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'issue-item';
+    item.dataset.idx = i;
+    item.innerHTML = `
+      <span class="issue-num" style="background:${meta.color}">${num}</span>
+      <div class="issue-item-body">
+        <div class="issue-item-head">
+          <span class="issue-type" style="color:${meta.color}">${esc(meta.label)}</span>${esc(issue.message || '')}
+        </div>
+        ${issue.text ? `<div class="issue-text">${esc(issue.text)}</div>` : ''}
+      </div>
+    `;
+    item.addEventListener('click', () => highlightIssue(i, true));
+    list.appendChild(item);
+  });
+
+  if (!issues.length) {
+    list.innerHTML = '<div class="issues-empty">검출된 이슈가 없습니다.</div>';
+  }
+  document.getElementById('issues-modal').classList.remove('hidden');
+}
+
+function highlightIssue(idx, scrollToBox) {
+  document.querySelectorAll('#issues-stage .issue-box').forEach(b =>
+    b.classList.toggle('active', Number(b.dataset.idx) === idx));
+  document.querySelectorAll('#issues-list .issue-item').forEach(it =>
+    it.classList.toggle('active', Number(it.dataset.idx) === idx));
+  if (scrollToBox) {
+    const box = document.querySelector(`#issues-stage .issue-box[data-idx="${idx}"]`);
+    box?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+function closeIssuesModal() {
+  document.getElementById('issues-modal').classList.add('hidden');
+  document.getElementById('issues-image').src = '';
+  issuesModalCap = null;
 }
 
 // ── 유틸 ─────────────────────────────────────────────────────────────────────

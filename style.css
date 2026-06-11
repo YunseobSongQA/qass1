@@ -455,6 +455,197 @@ body {
   text-align: center;
 }
 
+/* ── ISSUES (1차 자동 점검) ──────────────────────────────────────────────────── */
+.card-thumb { position: relative; }
+
+.badge-issues {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  transition: transform .15s;
+}
+
+.badge-issues:hover { transform: scale(1.08); }
+
+.btn-issues {
+  color: var(--danger);
+  border-color: #fca5a5;
+}
+
+.btn-issues:hover { background: #fef2f2; }
+
+.issues-modal-card {
+  max-width: 1100px;
+  width: 100%;
+  height: 92vh;
+  max-height: 92vh;
+  padding: 20px 24px;
+  gap: 14px;
+}
+
+.issues-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.issues-modal-head h2 {
+  flex: 1;
+  min-width: 0;
+  font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.overlay-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.issues-modal-body {
+  flex: 1;
+  display: flex;
+  gap: 16px;
+  min-height: 0;
+}
+
+.issues-image-pane {
+  flex: 1.6;
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.issues-stage {
+  position: relative;
+}
+
+.issues-stage img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.issue-box {
+  position: absolute;
+  border: 2px solid var(--danger);
+  border-radius: 3px;
+  min-width: 8px;
+  min-height: 8px;
+  cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.6);
+}
+
+.issue-box.active {
+  box-shadow: 0 0 0 3px rgba(30,41,59,.35);
+  z-index: 2;
+}
+
+.issue-box-num {
+  position: absolute;
+  top: -9px;
+  left: -9px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.issues-stage.overlay-off .issue-box { display: none; }
+
+.issues-list {
+  flex: 1;
+  min-width: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.issue-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+
+.issue-item:hover { background: var(--bg); }
+
+.issue-item.active {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+
+.issue-num {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}
+
+.issue-item-body { min-width: 0; }
+
+.issue-item-head {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.issue-type {
+  font-weight: 700;
+  font-size: 12px;
+  margin-right: 6px;
+}
+
+.issue-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.issues-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 40px 0;
+}
+
 /* ── MODAL ───────────────────────────────────────────────────────────────────── */
 .modal-overlay {
   position: fixed;
@@ -628,4 +819,10 @@ body {
   /* ── Login & Modal ── */
   .login-card { padding: 28px 20px; }
   .modal-card { padding: 24px 20px; }
+
+  /* ── Issues 모달 ── */
+  .issues-modal-card { padding: 16px 12px; height: 94vh; max-height: 94vh; }
+  .issues-modal-body { flex-direction: column; }
+  .issues-image-pane { flex: 1.4; }
+  .issues-list { flex: 1; min-width: 0; }
 }
