@@ -24,6 +24,24 @@
     return { x:Math.round(r.left+scrollX), y:Math.round(r.top+scrollY),
              w:Math.round(r.width), h:Math.round(r.height) };
   }
+  // 화면에 실제로 보이는 요소만 점검 (숨겨진 모바일용 중복 마크업 등 제외)
+  function visible(el){
+    if(!el || !el.getClientRects().length) return false;
+    const cs=getComputedStyle(el);
+    if(cs.visibility==='hidden'||cs.display==='none'||cs.opacity==='0') return false;
+    const r=el.getBoundingClientRect();
+    return r.width>1 && r.height>1;
+  }
+  // 조상 중에 가로 스크롤/클리핑 컨테이너가 있으면 캐러셀 등 의도된 배치로 본다
+  function clippedByAncestor(el){
+    let p=el.parentElement,n=0;
+    while(p&&p!==document.body&&n++<8){
+      const o=getComputedStyle(p).overflowX;
+      if(o==='hidden'||o==='auto'||o==='scroll') return true;
+      p=p.parentElement;
+    }
+    return false;
+  }
   function cssPath(el){
     if(!el||!el.tagName) return '';
     if(el.id) return '#'+el.id;
@@ -50,6 +68,7 @@
     let n;
     while((n=w.nextNode())){
       const t=n.nodeValue, el=n.parentElement;
+      if(!visible(el)) continue;
       for(const [bad,good] of SPELL)   if(t.includes(bad)) out.push(mk('spell','error',el,"'"+bad+"' → '"+good+"'",bad,good,t));
       for(const [bad,good] of SPACING) if(t.includes(bad)) out.push(mk('spacing','warn',el,"'"+bad+"' → '"+good+"'",bad,good,t));
       for(const [re,label] of SPACING_RE){re.lastIndex=0; if(re.test(t)) out.push(mk('spacing','warn',el,label,null,null,t));}
@@ -58,24 +77,23 @@
   function checkUI(root,out){
     const vw=document.documentElement.clientWidth;
     root.querySelectorAll('img').forEach(img=>{
-      if(img.complete && img.naturalWidth===0)
+      if(img.complete && img.naturalWidth===0 && visible(img))
         out.push(mk('ui','error',img,'이미지 로드 실패(깨짐)',null,null,img.getAttribute('src')||img.alt||''));
     });
     root.querySelectorAll('*').forEach(el=>{
+      if(!visible(el)) return;
       const cs=getComputedStyle(el);
-      const clip=cs.overflow==='hidden'||cs.overflowX==='hidden'||cs.textOverflow==='ellipsis';
-      if(clip && el.scrollWidth>el.clientWidth+1 && el.textContent.trim())
+      // 말줄임(...)은 의도된 디자인이므로 제외하고, 말줄임 처리 없이 잘리는 경우만 검출
+      const clip=(cs.overflow==='hidden'||cs.overflowX==='hidden')&&cs.textOverflow!=='ellipsis';
+      const hasOwnText=[...el.childNodes].some(c=>c.nodeType===3&&c.nodeValue.trim());
+      if(clip && hasOwnText && el.scrollWidth>el.clientWidth+2)
         out.push(mk('ui','warn',el,'텍스트 가로 잘림',null,null,el.textContent));
       const r=el.getBoundingClientRect();
-      if(r.width>0 && r.right>vw+2){
+      // 화면 안에서 시작해 밖으로 삐져나가는 요소만. 캐러셀 등 클리핑 컨테이너 내부는 제외
+      if(r.width>0 && r.left<vw && r.right>vw+2 && !clippedByAncestor(el)){
         const pr=el.parentElement&&el.parentElement.getBoundingClientRect();
         if(!pr||pr.right<=vw+2) out.push(mk('ui','warn',el,'요소가 화면 가로폭 초과',null,null,el.tagName.toLowerCase()));
       }
-    });
-    root.querySelectorAll('button, a').forEach(el=>{
-      const img=el.querySelector('img');
-      const label=(el.textContent||'').trim()||el.getAttribute('aria-label')||el.title||(img&&img.alt);
-      if(!label) out.push(mk('ui','warn',el,'레이블 없는 버튼/링크',null,null,el.tagName.toLowerCase()));
     });
   }
   function run(root){
@@ -84,8 +102,13 @@
     try{checkText(root,out);}catch(e){console.warn('[QASS] text',e);}
     try{checkUI(root,out);}catch(e){console.warn('[QASS] ui',e);}
     const seen=new Set();
-    return out.filter(i=>{const k=i.type+'|'+i.message+'|'+i.selector+'|'+i.text;
+    // 텍스트 이슈는 같은 문구가 여러 요소에 반복돼도 1건으로 합산
+    const deduped=out.filter(i=>{
+      const k=(i.type==='ui')
+        ? i.type+'|'+i.message+'|'+i.selector+'|'+i.text
+        : i.type+'|'+i.message+'|'+i.text;
       if(seen.has(k))return false; seen.add(k); return true;});
+    return deduped.slice(0,60);
   }
   global.QassCheck={run,SPELL,SPACING};
 })(typeof window!=='undefined'?window:this);

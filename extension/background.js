@@ -45,7 +45,7 @@ async function setCapturing(value) {
     const tabs = await chrome.tabs.query({});
     for (const tab of tabs) {
       if (!tab.url || tab.url.startsWith('chrome') || tab.url.startsWith('about')) continue;
-      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['checker.js', 'content.js'] }).catch(() => {});
+      chrome.scripting.executeScript({ target: { tabId: tab.id, allFrames: true }, files: ['checker.js', 'content.js'] }).catch(() => {});
     }
   } else {
     await finalizeAll();
@@ -62,40 +62,56 @@ async function handleScrollCapture(tabId, windowId, msg) {
 }
 
 // ── 페이지 전체 스캔 ──────────────────────────────────────────────────────────
+// captureVisibleTab 은 초당 호출 횟수 제한이 있어 충분한 간격을 둔다.
+const CAPTURE_INTERVAL = 550;
+
 async function fullPageScan(tabId, windowId) {
   if (!tabCaptures.has(tabId)) tabCaptures.set(tabId, { windowId, url: '', title: '', captures: [] });
   const state = tabCaptures.get(tabId);
   state.scanning = true;
   try {
-    await windowScan(tabId, windowId);
-    await innerScan(tabId, windowId);
-    await chrome.scripting.executeScript({ target: { tabId }, func: () => window.scrollTo(0, 0) }).catch(() => {});
-    state.issues = await getIssues(tabId);
+    // 새로 열린 탭/프레임에도 점검 스크립트가 있도록 보장
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true }, files: ['checker.js', 'content.js'],
+    }).catch(() => {});
+    const frameId = await windowScan(tabId, windowId);
+    await innerScan(tabId, windowId, frameId);
+    await scrollFrameTo(tabId, frameId, 0);
+    state.issues = await getIssues(tabId, frameId);
   } finally {
     state.scanning = false;
   }
 }
 
 async function windowScan(tabId, windowId) {
-  const info = await getScrollInfo(tabId);
-  const { scrollHeight, viewportH, viewportW, dpr } = info;
+  const frames = await frameInfoAll(tabId);
+  if (!frames.length) return 0;
+  const top = frames.find(f => f.frameId === 0) || frames[0];
+  // 실제 본문 스크롤이 일어나는 프레임 선택
+  // (네이버 블로그처럼 본문이 iframe 안에 있는 페이지 대응)
+  let fr = top;
+  for (const f of frames) {
+    if ((f.scrollHeight - f.viewportH) > (fr.scrollHeight - fr.viewportH)) fr = f;
+  }
+  const stepH = fr.viewportH;
   const positions = [];
-  for (let y = 0; y + viewportH <= scrollHeight; y += viewportH) positions.push(y);
-  const bottom = Math.max(0, scrollHeight - viewportH);
+  for (let y = 0; y + stepH <= fr.scrollHeight; y += stepH) positions.push(y);
+  const bottom = Math.max(0, fr.scrollHeight - stepH);
   if (!positions.length || positions[positions.length - 1] < bottom) positions.push(bottom);
   for (const y of positions) {
-    await chrome.scripting.executeScript({ target: { tabId }, func: (sy) => window.scrollTo(0, sy), args: [y] }).catch(() => {});
-    await sleep(200);
-    const actual = await getScrollInfo(tabId);
-    await doCapture(tabId, windowId, actual.scrollY, actual.scrollHeight, viewportH, viewportW, dpr);
+    await scrollFrameTo(tabId, fr.frameId, y);
+    await sleep(CAPTURE_INTERVAL);
+    const cur = await frameInfo(tabId, fr.frameId);
+    await doCapture(tabId, windowId, cur.scrollY, fr.scrollHeight, stepH, top.viewportW, top.dpr);
   }
+  return fr.frameId;
 }
 
-async function innerScan(tabId, windowId) {
+async function innerScan(tabId, windowId, frameId) {
   let elements = [];
   try {
     const [res] = await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId, frameIds: [frameId] },
       func: () => {
         let i = 0; const list = [];
         for (const el of document.querySelectorAll('*')) {
@@ -112,21 +128,22 @@ async function innerScan(tabId, windowId) {
   } catch (_) { return; }
   if (!elements.length) return;
 
-  const { viewportH, viewportW, dpr, scrollHeight: pageScrollHeight } = await getScrollInfo(tabId);
+  const fi = await frameInfo(tabId, frameId);
+  const top = frameId === 0 ? fi : await frameInfo(tabId, 0);
   for (const { idx, scrollHeight, clientHeight } of elements) {
     const positions = [];
     for (let y = 0; y + clientHeight <= scrollHeight; y += clientHeight) positions.push(y);
     const bottom = Math.max(0, scrollHeight - clientHeight);
     if (!positions.length || positions[positions.length - 1] < bottom) positions.push(bottom);
     for (const y of positions) {
-      await chrome.scripting.executeScript({ target: { tabId }, func: (i, top) => { const el = document.querySelector(`[data-qa-scan="${i}"]`); if (el) el.scrollTop = top; }, args: [idx, y] }).catch(() => {});
-      await sleep(200);
-      const actual = await getScrollInfo(tabId);
-      await doCapture(tabId, windowId, actual.scrollY, pageScrollHeight, viewportH, viewportW, dpr);
+      await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, func: (i, top) => { const el = document.querySelector(`[data-qa-scan="${i}"]`); if (el) el.scrollTop = top; }, args: [idx, y] }).catch(() => {});
+      await sleep(CAPTURE_INTERVAL);
+      const actual = await frameInfo(tabId, frameId);
+      await doCapture(tabId, windowId, actual.scrollY, fi.scrollHeight, fi.viewportH, top.viewportW, top.dpr);
     }
-    await chrome.scripting.executeScript({ target: { tabId }, func: (i) => { const el = document.querySelector(`[data-qa-scan="${i}"]`); if (el) el.scrollTop = 0; }, args: [idx] }).catch(() => {});
+    await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, func: (i) => { const el = document.querySelector(`[data-qa-scan="${i}"]`); if (el) el.scrollTop = 0; }, args: [idx] }).catch(() => {});
   }
-  await chrome.scripting.executeScript({ target: { tabId }, func: () => document.querySelectorAll('[data-qa-scan]').forEach(el => el.removeAttribute('data-qa-scan')) }).catch(() => {});
+  await chrome.scripting.executeScript({ target: { tabId, frameIds: [frameId] }, func: () => document.querySelectorAll('[data-qa-scan]').forEach(el => el.removeAttribute('data-qa-scan')) }).catch(() => {});
 }
 
 // ── 스크린샷 촬영 ─────────────────────────────────────────────────────────────
@@ -136,12 +153,20 @@ async function doCapture(tabId, windowId, scrollY, scrollHeight, viewportH, view
     const [activeTab] = await chrome.tabs.query({ active: true, windowId: tab.windowId });
     if (!activeTab || activeTab.id !== tabId) return;
 
-    const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    let dataUrl;
+    try {
+      dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    } catch (e) {
+      // 초당 캡처 횟수 제한에 걸린 경우 잠시 후 1회 재시도 (조각 누락 방지)
+      await sleep(800);
+      dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId, { format: 'png' });
+    }
     if (!tabCaptures.has(tabId)) tabCaptures.set(tabId, { windowId: tab.windowId, url: tab.url, title: tab.title, captures: [] });
     const state = tabCaptures.get(tabId);
     const last = state.captures[state.captures.length - 1];
+    // 화면이 직전 조각과 완전히 같으면 중복 추가하지 않는다
+    if (last && last.dataUrl === dataUrl) return;
     const stitchY = (last && scrollY === last.scrollY) ? last.stitchY + last.viewportH : scrollY;
-    if (last && last.scrollY === scrollY && last.stitchY === stitchY) return;
 
     state.url = tab.url;
     state.title = tab.title;
@@ -286,12 +311,18 @@ async function stitchCaptures(captures) {
 
   const offscreen = new OffscreenCanvas(canvasW, canvasH);
   const ctx = offscreen.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvasW, canvasH);
   const sorted = [...captures].sort((a, b) => a.stitchY - b.stitchY);
   for (const cap of sorted) {
     const resp = await fetch(cap.dataUrl);
     const blob = await resp.blob();
     const bitmap = await createImageBitmap(blob);
-    ctx.drawImage(bitmap, 0, Math.round(cap.stitchY * scale));
+    // 비트맵은 기기 픽셀 크기이므로 캔버스 배율에 맞춰 명시적으로 축소해서 그린다
+    const capDpr = cap.dpr || 1;
+    const destW = Math.round((bitmap.width / capDpr) * scale) || canvasW;
+    const destH = Math.round((bitmap.height / capDpr) * scale) || Math.round(cap.viewportH * scale);
+    ctx.drawImage(bitmap, 0, Math.round(cap.stitchY * scale), destW, destH);
     bitmap.close();
   }
   const blob = await offscreen.convertToBlob({ type: 'image/png' });
@@ -312,10 +343,10 @@ function extractHostname(url) {
 }
 
 // ── DOM 자동 점검 (라이브 페이지에서 실행, 좌표는 %로 정규화) ──
-async function getIssues(tabId) {
+async function getIssues(tabId, frameId = 0) {
   try {
     const [res] = await chrome.scripting.executeScript({
-      target: { tabId },
+      target: { tabId, frameIds: [frameId] },
       func: () => {
         if (!window.QassCheck) return [];
         const issues = window.QassCheck.run(document.body);
@@ -335,13 +366,51 @@ async function getIssues(tabId) {
   } catch (_) { return []; }
 }
 
-function getScrollInfo(tabId) {
-  return new Promise(resolve => {
-    const fallback = { scrollY: 0, scrollHeight: 0, viewportH: 900, viewportW: 1440, dpr: 1 };
-    chrome.tabs.sendMessage(tabId, { type: 'GET_SCROLL_INFO' }, resp => {
-      resolve(chrome.runtime.lastError || !resp ? fallback : resp);
+// ── 프레임별 스크롤 정보 ─────────────────────────────────────────────────────
+const FRAME_FALLBACK = { scrollY: 0, scrollHeight: 0, viewportH: 900, viewportW: 1440, dpr: 1 };
+
+function frameInfoFunc() {
+  return {
+    scrollY: Math.round(window.scrollY),
+    scrollHeight: Math.max(
+      document.documentElement.scrollHeight,
+      document.body ? document.body.scrollHeight : 0
+    ),
+    viewportH: window.innerHeight,
+    viewportW: window.innerWidth,
+    dpr: window.devicePixelRatio || 1,
+  };
+}
+
+async function frameInfoAll(tabId) {
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: frameInfoFunc,
     });
-  });
+    return (results || [])
+      .filter(r => r && r.result && r.result.viewportH > 0)
+      .map(r => ({ frameId: r.frameId, ...r.result }));
+  } catch (_) { return []; }
+}
+
+async function frameInfo(tabId, frameId) {
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId, frameIds: [frameId] },
+      func: frameInfoFunc,
+    });
+    return res?.result || FRAME_FALLBACK;
+  } catch (_) { return FRAME_FALLBACK; }
+}
+
+function scrollFrameTo(tabId, frameId, y) {
+  return chrome.scripting.executeScript({
+    target: { tabId, frameIds: [frameId] },
+    // smooth 스크롤 페이지에서 이동 중 캡처되지 않도록 즉시 이동
+    func: (sy) => window.scrollTo({ top: sy, left: 0, behavior: 'instant' }),
+    args: [y],
+  }).catch(() => {});
 }
 
 // ── 탭 이벤트 ─────────────────────────────────────────────────────────────────
