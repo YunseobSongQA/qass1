@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>개인정보처리방침 — QASS</title>
+  <meta name="description" content="QASS의 개인정보처리방침입니다. 수집하는 정보, 이용 목적, 보관 및 파기, 이용자의 권리를 안내합니다." />
+  <link rel="stylesheet" href="landing.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="index.html" class="site-logo">QASS</a>
+      <nav class="site-nav">
+        <a href="usage.html">사용 가이드</a>
+        <a href="guide.html">QA 실무 가이드</a>
+        <a href="index.html#faq">FAQ</a>
+        <a href="privacy.html">개인정보처리방침</a>
+      </nav>
+      <a href="app.html" class="btn-cta btn-cta-sm">앱 시작하기</a>
+    </div>
+  </header>
+
+  <main class="page-wrap prose">
+    <h1 class="page-title">개인정보처리방침</h1>
+    <p class="page-date">시행일: 2026년 6월 11일</p>
+
+    <p>
+      QASS(이하 "서비스")는 이용자의 개인정보를 중요하게 생각하며, 관련 법령을 준수합니다.
+      본 방침은 서비스가 어떤 정보를 수집하고, 어떻게 이용·보관·파기하는지를 설명합니다.
+    </p>
+
+    <h2>1. 수집하는 정보</h2>
+    <p>서비스는 회원가입 절차 없이 운영되며, 다음 정보만을 수집합니다.</p>
+    <ul>
+      <li><strong>이용자가 직접 입력하는 정보</strong> — 입장 시 입력하는 이름(닉네임 가능), 방 이름,
+          방 비밀번호, 방 생성자 이름</li>
+      <li><strong>이용 과정에서 생성되는 정보</strong> — 업로드한 캡처 이미지, 캡처 대상 페이지의
+          URL과 제목, 캡처 시각, 자동 점검 결과(검출된 텍스트 일부 포함)</li>
+      <li><strong>브라우저에 저장되는 정보</strong> — 방 입장 세션 정보(localStorage), 확장 프로그램의
+          방 연결 정보(chrome.storage). 이 정보는 이용자의 기기에만 저장됩니다.</li>
+    </ul>
+    <p>이메일, 전화번호, 실명, 결제 정보 등은 수집하지 않습니다.</p>
+
+    <h2>2. 이용 목적</h2>
+    <ul>
+      <li>QA 증적의 저장·공유·열람 등 서비스 핵심 기능 제공</li>
+      <li>방 단위 접근 통제(비밀번호 확인) 및 업로더 표시</li>
+      <li>같은 방 내 이름 중복 방지 등 서비스 품질 유지</li>
+    </ul>
+
+    <h2>3. 보관 및 처리 위탁</h2>
+    <p>
+      수집된 정보와 캡처 이미지는 클라우드 데이터베이스 및 스토리지 서비스(Supabase)에 저장됩니다.
+      사이트 호스팅에는 Cloudflare를 이용합니다. 각 서비스는 자체 보안 정책에 따라 데이터를
+      보호합니다.
+    </p>
+    <p>
+      <strong>유의:</strong> 업로드된 캡처 이미지는 방 구성원 간 공유를 위해 링크를 아는 사람이
+      열람할 수 있는 방식으로 저장됩니다. 민감한 개인정보가 포함된 화면은 캡처 전에 가리거나,
+      업로드 후 삭제 기능을 이용해 주시기 바랍니다.
+    </p>
+
+    <h2>4. 보유 기간 및 파기</h2>
+    <ul>
+      <li>캡처와 방 정보는 이용자가 삭제할 때까지 보관됩니다.</li>
+      <li>이용자는 언제든지 개별 캡처를 삭제할 수 있으며, 방 생성자는 방 전체를 삭제할 수 있습니다.
+          방을 삭제하면 방에 속한 모든 캡처 이미지가 함께 삭제됩니다.</li>
+      <li>브라우저에 저장된 세션 정보는 브라우저 데이터 삭제 또는 확장 프로그램의 연결 해제로
+          제거할 수 있습니다.</li>
+    </ul>
+
+    <h2>5. 제3자 제공</h2>
+    <p>
+      서비스는 이용자의 정보를 제3자에게 판매하거나 제공하지 않습니다. 단, 법령에 따른 요청이
+      있는 경우는 예외로 합니다.
+    </p>
+
+    <h2>6. 광고 및 쿠키</h2>
+    <p>
+      서비스에 광고(Google AdSense 등)가 게재되는 경우, 광고 제공 사업자는 광고 맞춤화를 위해
+      쿠키를 사용할 수 있습니다. 이용자는 브라우저 설정 또는
+      <a href="https://adssettings.google.com" rel="noopener" target="_blank">Google 광고 설정</a>에서
+      맞춤 광고를 거부할 수 있습니다.
+    </p>
+
+    <h2>7. 이용자의 권리</h2>
+    <p>
+      이용자는 본인이 업로드한 증적의 열람·삭제를 서비스 내에서 직접 수행할 수 있습니다.
+      그 외 개인정보 관련 문의는 아래 연락처로 요청하실 수 있으며, 지체 없이 처리합니다.
+    </p>
+
+    <h2>8. 문의처</h2>
+    <p>
+      개인정보 관련 문의: <a href="mailto:dwa3432@gmail.com">dwa3432@gmail.com</a>
+    </p>
+
+    <h2>9. 방침의 변경</h2>
+    <p>
+      본 방침이 변경되는 경우 이 페이지를 통해 공지하며, 상단의 시행일을 갱신합니다.
+    </p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="footer-brand">
+        <div class="site-logo">QASS</div>
+        <p>팀을 위한 QA 증적 관리 플랫폼</p>
+      </div>
+      <div class="footer-links">
+        <a href="app.html">앱 시작하기</a>
+        <a href="usage.html">사용 가이드</a>
+        <a href="guide.html">QA 실무 가이드</a>
+        <a href="privacy.html">개인정보처리방침</a>
+      </div>
+      <div class="footer-contact">
+        <p>문의: <a href="mailto:dwa3432@gmail.com">dwa3432@gmail.com</a></p>
+        <p class="footer-copy">© 2026 QASS. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

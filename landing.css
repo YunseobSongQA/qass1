@@ -1,0 +1,406 @@
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --border: #e2e8f0;
+  --text: #1e293b;
+  --text-muted: #64748b;
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--surface);
+  color: var(--text);
+  line-height: 1.7;
+}
+
+/* ── HEADER ──────────────────────────────────────────────────────────────────── */
+.site-header {
+  background: #1e293b;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.site-header-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 24px;
+  height: 60px;
+}
+
+.site-logo {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: -1px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.site-nav {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+}
+
+.site-nav a {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: color .15s;
+}
+
+.site-nav a:hover { color: #f1f5f9; }
+
+.btn-cta {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 13px 28px;
+  border-radius: 10px;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.btn-cta:hover { background: var(--primary-dark); }
+
+.btn-cta-sm {
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
+
+.btn-ghost {
+  display: inline-block;
+  color: var(--primary-dark);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+  padding: 13px 28px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.btn-ghost:hover { background: var(--bg); }
+
+/* ── HERO ────────────────────────────────────────────────────────────────────── */
+.hero {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 80px 24px 64px;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1.35;
+}
+
+.hero-sub {
+  margin: 20px auto 0;
+  font-size: 17px;
+  color: var(--text-muted);
+  max-width: 640px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ── SECTIONS ────────────────────────────────────────────────────────────────── */
+.section {
+  padding: 64px 24px;
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.section-alt {
+  max-width: none;
+  background: var(--bg);
+}
+
+.section-alt > * {
+  max-width: 1080px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+/* 기능 카드 */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+}
+
+.feature-icon { font-size: 32px; margin-bottom: 12px; }
+
+.feature-card h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.feature-card p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* 작동 방식 */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.step {
+  text-align: center;
+  padding: 20px;
+}
+
+.step-num {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 14px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.step p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* 본문 콘텐츠 */
+.prose {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.prose p {
+  font-size: 15.5px;
+  color: #334155;
+  margin-bottom: 18px;
+}
+
+.prose h2 {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin: 40px 0 14px;
+}
+
+.prose h3 {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 28px 0 10px;
+}
+
+.prose ul, .prose ol {
+  margin: 0 0 18px 22px;
+  font-size: 15.5px;
+  color: #334155;
+}
+
+.prose li { margin-bottom: 8px; }
+
+.prose a { color: var(--primary-dark); }
+
+.prose strong { color: var(--text); }
+
+.prose .callout {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-size: 14.5px;
+  margin-bottom: 18px;
+}
+
+/* FAQ */
+.faq-list {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.faq-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.faq-item summary {
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.faq-item p {
+  margin-top: 10px;
+  font-size: 14.5px;
+  color: var(--text-muted);
+}
+
+.faq-item a { color: var(--primary-dark); }
+
+/* 마지막 CTA */
+.cta-section {
+  text-align: center;
+}
+
+.cta-section h2 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.cta-section p {
+  color: var(--text-muted);
+  margin: 10px 0 24px;
+}
+
+/* ── 콘텐츠 페이지 (가이드/방침) ─────────────────────────────────────────────── */
+.page-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.page-date {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+
+/* ── FOOTER ──────────────────────────────────────────────────────────────────── */
+.site-footer {
+  background: #1e293b;
+  color: #94a3b8;
+  margin-top: 40px;
+}
+
+.site-footer-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.footer-brand { flex: 1; min-width: 200px; }
+
+.footer-brand p {
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-links a {
+  color: #94a3b8;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.footer-links a:hover { color: #f1f5f9; }
+
+.footer-contact { font-size: 13px; }
+
+.footer-contact a { color: #cbd5e1; }
+
+.footer-copy {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ── 모바일 ──────────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .site-header-inner { padding: 0 14px; gap: 12px; height: 54px; }
+  .site-nav { gap: 14px; }
+  .site-nav a { font-size: 13px; }
+
+  .hero { padding: 48px 18px 40px; }
+  .hero h1 { font-size: 27px; }
+  .hero-sub { font-size: 15px; }
+
+  .section { padding: 44px 18px; }
+  .section-title { font-size: 22px; margin-bottom: 28px; }
+
+  .page-wrap { padding: 32px 18px 60px; }
+  .page-title { font-size: 24px; }
+
+  .site-footer-inner { gap: 24px; padding: 32px 18px; }
+}
