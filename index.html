@@ -33,6 +33,16 @@
       </div>
     </header>
 
+    <nav class="main-tabs">
+      <button class="main-tab active" data-tab="capture">증적 캡처</button>
+      <button class="main-tab" data-tab="inspect">1차 자동 점검</button>
+    </nav>
+
+    <div class="feature-banner">
+      <span class="feature-banner-text"><b>새 기능 · 1차 자동 점검</b> — 캡처에서 맞춤법·띄어쓰기·UI 장애를 자동 검출합니다.</span>
+      <button id="btn-feature-tour" class="btn-sm btn-primary">둘러보기</button>
+    </div>
+
     <div class="rooms-hero">
       <h1 class="rooms-hero-title">QA 증적 방 목록</h1>
       <p class="rooms-hero-sub">방을 선택해 입장하거나, 새 방을 만들어 팀과 함께 증적을 관리하세요.</p>
@@ -72,6 +82,80 @@
 
     <div id="captures-grid" class="captures-grid">
       <div class="empty-state">캡처된 증적이 없습니다.</div>
+    </div>
+  </div>
+
+  <!-- 1차 자동 점검 화면 -->
+  <div id="inspect-screen" class="hidden">
+    <header class="topbar">
+      <div class="topbar-brand" id="btn-brand-home-inspect" style="cursor:pointer;" title="홈으로">QASS</div>
+      <div class="topbar-center">
+        <span class="topbar-subtitle">QA 증적 관리 플랫폼</span>
+      </div>
+      <div class="topbar-right">
+        <span id="inspect-user-badge" class="uploader-badge"></span>
+      </div>
+    </header>
+
+    <nav class="main-tabs">
+      <button class="main-tab" data-tab="capture">증적 캡처</button>
+      <button class="main-tab active" data-tab="inspect">1차 자동 점검</button>
+    </nav>
+
+    <div class="inspect-wrap">
+      <h1 class="inspect-title">1차 자동 점검</h1>
+      <p class="inspect-sub">저장된 캡처에서 맞춤법·띄어쓰기·UI 장애를 모아 봅니다.</p>
+
+      <!-- 기능 미리보기 (하드코딩 예시 — 실제 데이터와 무관) -->
+      <div id="inspect-preview" class="inspect-preview">
+        <div class="preview-head">
+          <span class="preview-badge">예시</span>
+          <span class="preview-desc">캡처할 때 자동으로 점검돼, 이렇게 분류되어 표시됩니다.</span>
+        </div>
+        <div class="preview-body">
+          <div class="preview-stage">
+            <div class="preview-fake-bar"></div>
+            <div class="preview-fake-title">회원가입 완료</div>
+            <div class="preview-mark" style="--mark:#D97706"><span class="preview-num" style="background:#D97706">1</span>가입이 완료 됬습니다.</div>
+            <div class="preview-mark" style="--mark:#2563EB"><span class="preview-num" style="background:#2563EB">2</span>이제 모든 기능을 사용 할수있다!</div>
+            <div class="preview-mark preview-clip" style="--mark:#E11D48"><span class="preview-num" style="background:#E11D48">3</span>확인 버튼의 텍스트가 가로로 잘립니</div>
+          </div>
+          <div class="preview-list">
+            <div class="preview-item"><span class="issue-num" style="background:#D97706">1</span><span><b style="color:#D97706">맞춤법</b> <s>됬</s> → 됐</span></div>
+            <div class="preview-item"><span class="issue-num" style="background:#2563EB">2</span><span><b style="color:#2563EB">띄어쓰기</b> <s>할수있다</s> → 할 수 있다</span></div>
+            <div class="preview-item"><span class="issue-num" style="background:#E11D48">3</span><span><b style="color:#E11D48">UI장애</b> 텍스트 가로 잘림</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 선택 단계 -->
+      <div id="inspect-select">
+        <div class="inspect-section-label">📁 폴더 선택</div>
+        <div id="inspect-rooms" class="inspect-rooms">
+          <div class="empty-state">폴더를 불러오는 중…</div>
+        </div>
+
+        <div id="inspect-captures-section" class="hidden">
+          <div class="inspect-captures-head">
+            <span id="inspect-room-label"></span>
+            <a id="inspect-select-all" href="#">전체 선택</a>
+          </div>
+          <div id="inspect-captures" class="inspect-captures-grid"></div>
+          <div class="inspect-select-bar">
+            <button id="btn-inspect-results" class="btn-auth" disabled>선택한 0개 결과 보기</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 결과 단계 -->
+      <div id="inspect-results" class="hidden">
+        <div class="inspect-results-head">
+          <div id="inspect-chips" class="inspect-chips"></div>
+          <button id="btn-inspect-reselect" class="btn-sm">← 다시 선택</button>
+        </div>
+        <p id="inspect-results-empty" class="inspect-empty-note hidden">아직 검출된 실제 이슈가 없습니다. (평소처럼 캡처하면 자동으로 채워집니다)</p>
+        <div id="inspect-result-cards"></div>
+      </div>
     </div>
   </div>
 
