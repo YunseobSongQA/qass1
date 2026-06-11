@@ -45,7 +45,7 @@ async function setCapturing(value) {
     const tabs = await chrome.tabs.query({});
     for (const tab of tabs) {
       if (!tab.url || tab.url.startsWith('chrome') || tab.url.startsWith('about')) continue;
-      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] }).catch(() => {});
+      chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['checker.js', 'content.js'] }).catch(() => {});
     }
   } else {
     await finalizeAll();
@@ -70,6 +70,7 @@ async function fullPageScan(tabId, windowId) {
     await windowScan(tabId, windowId);
     await innerScan(tabId, windowId);
     await chrome.scripting.executeScript({ target: { tabId }, func: () => window.scrollTo(0, 0) }).catch(() => {});
+    state.issues = await getIssues(tabId);
   } finally {
     state.scanning = false;
   }
@@ -166,6 +167,7 @@ async function finalizeTab(tabId) {
     title: state.title || extractHostname(state.url),
     dataUrl: stitchedDataUrl,
     captureCount: state.captures.length,
+    issues: state.issues || [],
     timestamp: new Date().toLocaleString('ko-KR'),
     uploaded: false, uploading: false, uploadFailed: false,
   };
@@ -249,6 +251,7 @@ async function uploadToRoom(record) {
         title: record.title,
         capture_count: record.captureCount,
         image_path: path,
+        issues: record.issues || [],
       }),
     });
     if (!insertRes.ok) {
@@ -306,6 +309,30 @@ async function blobToDataUrl(blob) {
 
 function extractHostname(url) {
   try { return new URL(url).hostname; } catch { return url; }
+}
+
+// ── DOM 자동 점검 (라이브 페이지에서 실행, 좌표는 %로 정규화) ──
+async function getIssues(tabId) {
+  try {
+    const [res] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        if (!window.QassCheck) return [];
+        const issues = window.QassCheck.run(document.body);
+        const W = Math.max(document.documentElement.scrollWidth, innerWidth);
+        const H = Math.max(document.documentElement.scrollHeight, innerHeight);
+        return issues.map(i => ({
+          type: i.type, severity: i.severity, message: i.message,
+          wrong: i.wrong, right: i.right, text: i.text, selector: i.selector,
+          rectPct: i.rect ? {
+            x: +(i.rect.x / W * 100).toFixed(2), y: +(i.rect.y / H * 100).toFixed(2),
+            w: +(i.rect.w / W * 100).toFixed(2), h: +(i.rect.h / H * 100).toFixed(2),
+          } : null,
+        }));
+      },
+    });
+    return res?.result ?? [];
+  } catch (_) { return []; }
 }
 
 function getScrollInfo(tabId) {

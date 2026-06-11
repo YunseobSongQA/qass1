@@ -64,3 +64,7 @@ DROP POLICY IF EXISTS "anon delete" ON storage.objects;
 CREATE POLICY "anon delete" ON storage.objects
   FOR DELETE TO anon
   USING (bucket_id = 'qa-captures');
+
+-- 자동 점검 결과 저장용 컬럼
+ALTER TABLE public.captures
+  ADD COLUMN IF NOT EXISTS issues JSONB DEFAULT '[]'::jsonb;
