@@ -98,13 +98,44 @@ async function windowScan(tabId, windowId) {
   for (let y = 0; y + stepH <= fr.scrollHeight; y += stepH) positions.push(y);
   const bottom = Math.max(0, fr.scrollHeight - stepH);
   if (!positions.length || positions[positions.length - 1] < bottom) positions.push(bottom);
-  for (const y of positions) {
-    await scrollFrameTo(tabId, fr.frameId, y);
-    await sleep(CAPTURE_INTERVAL);
-    const cur = await frameInfo(tabId, fr.frameId);
-    await doCapture(tabId, windowId, cur.scrollY, fr.scrollHeight, stepH, top.viewportW, top.dpr);
+  // 고정 헤더가 본문을 덮어 이어붙인 이미지가 중간중간 가려지는 문제 방지:
+  // 첫 조각은 그대로 찍고, 두 번째 조각부터 fixed/sticky 요소를 잠시 숨긴다.
+  let hidFixed = false;
+  try {
+    for (let i = 0; i < positions.length; i++) {
+      await scrollFrameTo(tabId, fr.frameId, positions[i]);
+      if (i === 1) { await setFixedHidden(tabId, fr.frameId, true); hidFixed = true; }
+      await sleep(CAPTURE_INTERVAL);
+      const cur = await frameInfo(tabId, fr.frameId);
+      await doCapture(tabId, windowId, cur.scrollY, fr.scrollHeight, stepH, top.viewportW, top.dpr);
+    }
+  } finally {
+    if (hidFixed) await setFixedHidden(tabId, fr.frameId, false);
   }
   return fr.frameId;
+}
+
+function setFixedHidden(tabId, frameId, hide) {
+  return chrome.scripting.executeScript({
+    target: { tabId, frameIds: [frameId] },
+    func: (h) => {
+      if (h) {
+        document.querySelectorAll('body *').forEach(el => {
+          const p = getComputedStyle(el).position;
+          if ((p === 'fixed' || p === 'sticky') && !el.hasAttribute('data-qa-fixed-hidden')) {
+            el.setAttribute('data-qa-fixed-hidden', '1');
+            el.style.visibility = 'hidden';
+          }
+        });
+      } else {
+        document.querySelectorAll('[data-qa-fixed-hidden]').forEach(el => {
+          el.style.visibility = '';
+          el.removeAttribute('data-qa-fixed-hidden');
+        });
+      }
+    },
+    args: [hide],
+  }).catch(() => {});
 }
 
 async function innerScan(tabId, windowId, frameId) {
@@ -186,13 +217,26 @@ async function finalizeTab(tabId) {
   const stitchedDataUrl = await stitchCaptures(state.captures);
   if (!stitchedDataUrl) return;
 
+  // 내부 스크롤 조각이 추가되면 이미지가 문서보다 길어지므로
+  // % 좌표(문서 기준)를 이미지 기준으로 보정한다
+  let issues = state.issues || [];
+  const docH = state.captures[0]?.scrollHeight;
+  const totalH = state.captures.reduce((m, c) => Math.max(m, c.stitchY + c.viewportH), 0);
+  if (docH && totalH && Math.abs(totalH - docH) > 2) {
+    const f = docH / totalH;
+    issues = issues.map(i => i.rectPct ? {
+      ...i,
+      rectPct: { ...i.rectPct, y: +(i.rectPct.y * f).toFixed(2), h: +(i.rectPct.h * f).toFixed(2) },
+    } : i);
+  }
+
   const record = {
     id: Date.now(),
     url: state.url,
     title: state.title || extractHostname(state.url),
     dataUrl: stitchedDataUrl,
     captureCount: state.captures.length,
-    issues: state.issues || [],
+    issues,
     timestamp: new Date().toLocaleString('ko-KR'),
     uploaded: false, uploading: false, uploadFailed: false,
   };

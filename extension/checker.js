@@ -108,7 +108,19 @@
         ? i.type+'|'+i.message+'|'+i.selector+'|'+i.text
         : i.type+'|'+i.message+'|'+i.text;
       if(seen.has(k))return false; seen.add(k); return true;});
-    return deduped.slice(0,60);
+    // 같은 요소에서 나온 같은 타입 이슈는 박스가 겹치므로 한 건으로 병합
+    const byEl=new Map();
+    const merged=[];
+    for(const i of deduped){
+      const k=i.type+'|'+i.selector;
+      const prev=byEl.get(k);
+      if(prev){
+        if(i.message&&!prev.message.includes(i.message)) prev.message+=' · '+i.message;
+      }else{
+        byEl.set(k,i); merged.push(i);
+      }
+    }
+    return merged.slice(0,60);
   }
   global.QassCheck={run,SPELL,SPACING};
 })(typeof window!=='undefined'?window:this);

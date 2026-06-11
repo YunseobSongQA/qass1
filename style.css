@@ -1067,6 +1067,14 @@ body {
 
 .inspect-stage { position: relative; }
 
+.inspect-pane-hint {
+  font-weight: 400;
+  color: var(--primary-dark);
+}
+
+.inspect-pane-clickable { cursor: zoom-in; }
+.inspect-pane-clickable:hover { border-color: var(--primary); }
+
 .inspect-issue-list {
   display: flex;
   flex-direction: column;

@@ -446,7 +446,7 @@ function renderGrid(captures) {
     const imgUrl = getPublicUrl(cap.image_path);
     const name = cap.uploader_name || cap.user_display_name || cap.user_email || '—';
     const time = cap.captured_at ? new Date(cap.captured_at).toLocaleString('ko-KR') : '—';
-    const issues = Array.isArray(cap.issues) ? cap.issues : [];
+    const issues = mergeIssues(cap.issues);
     card.innerHTML = `
       <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기">
         ${issues.length ? `<span class="badge-issues" title="자동 점검 이슈 ${issues.length}건 — 클릭하면 상세 보기">⚠${issues.length}</span>` : ''}
@@ -598,9 +598,29 @@ const ISSUE_TYPE_META = {
 
 let issuesModalCap = null;
 
+// 같은 위치(거의 동일한 rectPct)·같은 타입 이슈는 박스가 겹쳐 보이므로 한 건으로 병합
+function mergeIssues(issues) {
+  const list = Array.isArray(issues) ? issues : [];
+  const merged = [];
+  for (const issue of list) {
+    const r = issue.rectPct;
+    const dup = r && merged.find(m => m.type === issue.type && m.rectPct &&
+      Math.abs(m.rectPct.x - r.x) < 0.5 && Math.abs(m.rectPct.y - r.y) < 0.5 &&
+      Math.abs(m.rectPct.w - r.w) < 1 && Math.abs(m.rectPct.h - r.h) < 1);
+    if (dup) {
+      if (issue.message && !(dup.message || '').includes(issue.message)) {
+        dup.message = (dup.message ? dup.message + ' · ' : '') + issue.message;
+      }
+    } else {
+      merged.push({ ...issue });
+    }
+  }
+  return merged;
+}
+
 function openIssuesModal(cap) {
   issuesModalCap = cap;
-  const issues = Array.isArray(cap.issues) ? cap.issues : [];
+  const issues = mergeIssues(cap.issues);
   document.getElementById('issues-modal-title').textContent =
     `1차 자동 점검 — ${cap.title || cap.url || '캡처'} (${issues.length}건)`;
 
@@ -799,7 +819,7 @@ function renderInspectCaptures() {
     return;
   }
   inspectCaptures.forEach(cap => {
-    const issues = Array.isArray(cap.issues) ? cap.issues : [];
+    const issues = mergeIssues(cap.issues);
     const card = document.createElement('label');
     card.className = 'inspect-cap-card';
     card.innerHTML = `
@@ -832,7 +852,7 @@ function showInspectResults() {
   showInspectStage('results');
 
   const totals = { spacing: 0, spell: 0, ui: 0 };
-  caps.forEach(c => (Array.isArray(c.issues) ? c.issues : []).forEach(issue => {
+  caps.forEach(c => mergeIssues(c.issues).forEach(issue => {
     if (totals[issue.type] !== undefined) totals[issue.type]++;
   }));
 
@@ -852,7 +872,7 @@ function showInspectResults() {
 }
 
 function buildInspectResultCard(cap) {
-  const issues = Array.isArray(cap.issues) ? cap.issues : [];
+  const issues = mergeIssues(cap.issues);
   const imgUrl = getPublicUrl(cap.image_path);
   const card = document.createElement('div');
   card.className = 'inspect-result-card';
@@ -887,6 +907,7 @@ function buildInspectResultCard(cap) {
       ${issues.length
         ? `<span class="inspect-result-badge">이슈 ${issues.length}건</span>`
         : '<span class="inspect-result-badge ok">이상 없음</span>'}
+      ${issues.length ? '<button class="btn-sm inspect-result-zoom">🔍 크게 보기</button>' : ''}
       <button class="btn-sm btn-primary inspect-result-dl">⬇ 원본 저장</button>
     </div>
     <div class="inspect-compare">
@@ -895,8 +916,8 @@ function buildInspectResultCard(cap) {
         <div class="inspect-pane-scroll"><img src="${esc(imgUrl)}" alt="원본" loading="lazy" /></div>
       </div>
       <div class="inspect-pane">
-        <div class="inspect-pane-label">검증 후 (자동 점검 표시)</div>
-        <div class="inspect-pane-scroll">
+        <div class="inspect-pane-label">검증 후 (자동 점검 표시) ${issues.length ? '<span class="inspect-pane-hint">— 클릭하면 크게 보기</span>' : ''}</div>
+        <div class="inspect-pane-scroll ${issues.length ? 'inspect-pane-clickable' : ''}">
           <div class="inspect-stage">
             <img src="${esc(imgUrl)}" alt="점검 결과" loading="lazy" />
             ${boxesHtml}
@@ -908,10 +929,15 @@ function buildInspectResultCard(cap) {
   `;
 
   card.querySelector('.inspect-result-dl').addEventListener('click', () => downloadCapture(cap));
+  card.querySelector('.inspect-result-zoom')?.addEventListener('click', () => openIssuesModal(cap));
+  card.querySelector('.inspect-pane-clickable')?.addEventListener('click', () => openIssuesModal(cap));
   card.querySelectorAll('.issue-item[data-idx]').forEach(item =>
     item.addEventListener('click', () => highlightInspectIssue(card, Number(item.dataset.idx))));
   card.querySelectorAll('.issue-box').forEach(box =>
-    box.addEventListener('click', () => highlightInspectIssue(card, Number(box.dataset.idx))));
+    box.addEventListener('click', e => {
+      e.stopPropagation();
+      highlightInspectIssue(card, Number(box.dataset.idx));
+    }));
   return card;
 }
 
