@@ -5,6 +5,7 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const TEST_ROOM_NAME = 'QASS 테스트 방';
 const TEST_ROOM_PASSWORD = 'qass1234';
+const SITE_URL = 'https://qass1.pages.dev';
 
 let isCapturing = false;
 let cachedHistory = [];
@@ -18,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-room-connect').addEventListener('click', onRoomConnect);
   document.getElementById('btn-room-create').addEventListener('click', onRoomCreate);
   document.getElementById('btn-room-disconnect').addEventListener('click', onRoomDisconnect);
+  document.getElementById('btn-room-open').addEventListener('click', onRoomOpen);
   document.getElementById('ext-mode-toggle').addEventListener('click', e => {
     e.preventDefault();
     setExtMode(!extCreateMode);
@@ -190,6 +192,15 @@ async function onRoomCreate() {
 async function onRoomDisconnect() {
   await chrome.storage.local.remove('roomSession');
   await updateRoomUI();
+}
+
+async function onRoomOpen() {
+  const { roomSession } = await chrome.storage.local.get('roomSession');
+  if (!roomSession?.room_id) return;
+  const url = `${SITE_URL}/app.html` +
+    `?room=${encodeURIComponent(roomSession.room_id)}` +
+    `&name=${encodeURIComponent(roomSession.uploader_name || '')}`;
+  chrome.tabs.create({ url });
 }
 
 // ── 캡처 토글 ─────────────────────────────────────────────────────────────────

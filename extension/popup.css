@@ -60,6 +60,13 @@ body {
 
 .btn-disconnect:hover { background: #1e293b; color: #94a3b8; }
 
+.btn-open {
+  color: #93c5fd;
+  border-color: #3b82f6;
+}
+
+.btn-open:hover { background: #1e3a8a; color: #dbeafe; }
+
 /* 연결 폼 */
 .room-connect-form {
   padding: 10px 14px;

@@ -23,8 +23,37 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindRoomScreenEvents();
   bindModalEvents();
   bindInspectEvents();
+  if (await tryDeepLink()) return;
   showScreen('login');
 });
+
+// ── 딥링크 (확장 프로그램에서 방 바로 열기) ──────────────────────────────────
+// app.html?room=<id>&name=<이름> — 확장에서 이미 비밀번호를 확인하고 연결된
+// 방이므로 별도 인증 없이 바로 입장한다.
+async function tryDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const roomId = params.get('room');
+  if (!roomId) return false;
+  const name = (params.get('name') || '').trim() || '익명';
+  setLoading(true);
+  try {
+    const { data, error } = await db
+      .from('rooms')
+      .select('id, room_name, created_by, created_at')
+      .eq('id', roomId)
+      .single();
+    if (error || !data) return false;
+    currentUser = name;
+    currentUploaderName = name;
+    document.getElementById('rooms-user-badge').textContent = `👤 ${name}`;
+    enterRoom(data, name);
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    setLoading(false);
+  }
+}
 
 // ── 로그인 ────────────────────────────────────────────────────────────────────
 function bindLoginEvents() {
