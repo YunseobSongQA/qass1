@@ -75,10 +75,19 @@ img { max-width: 100%; }
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
-  transition: color .15s;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, border-color .15s;
 }
 
-.site-nav a:hover { color: #f8fafc; }
+/* 마우스 올렸을 때 + 현재 보고 있는 페이지(active) 모두 같은 강조색 유지 */
+.site-nav a:hover,
+.site-nav a.active {
+  color: #60a5fa;
+  border-bottom-color: #60a5fa;
+}
+
+.site-nav a.active { font-weight: 600; }
 
 /* ── 버튼 ────────────────────────────────────────────────────────────────────── */
 .btn-cta {
