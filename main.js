@@ -430,7 +430,72 @@ function renderFiltered() {
     return matchSearch && (!filterUser || name === filterUser);
   });
   document.getElementById('count-label').textContent = `${filtered.length}건`;
+  renderMembers();
   renderGrid(filtered);
+}
+
+// ── 참여자 목록 (누가 몇 건을 언제 올렸는지) ──────────────────────────────────
+function renderMembers() {
+  const wrap = document.getElementById('room-members');
+  if (!wrap) return;
+
+  const map = new Map();
+  allCaptures.forEach(c => {
+    const name = c.uploader_name || c.user_display_name || c.user_email || '익명';
+    const t = c.captured_at ? new Date(c.captured_at).getTime() : 0;
+    const m = map.get(name) || { name, count: 0, last: 0 };
+    m.count++;
+    if (t > m.last) m.last = t;
+    map.set(name, m);
+  });
+  const members = [...map.values()].sort((a, b) => b.last - a.last);
+
+  if (!members.length) {
+    wrap.classList.add('hidden');
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const activeUser = document.getElementById('filter-user').value;
+  wrap.classList.remove('hidden');
+  wrap.innerHTML = `
+    <div class="room-members-head">
+      <span class="room-members-title">👥 참여자 ${members.length}명</span>
+      <span class="room-members-hint">이름을 누르면 그 사람의 증적만 모아 봅니다</span>
+    </div>
+    <div class="room-members-list">
+      ${members.map(m => `
+        <button class="member-chip${m.name === activeUser ? ' active' : ''}" data-name="${esc(m.name)}" title="${esc(m.name)} · ${m.count}건">
+          <span class="member-avatar">${esc(memberInitial(m.name))}</span>
+          <span class="member-info">
+            <span class="member-name">${esc(m.name)}</span>
+            <span class="member-meta">${m.count}건 · 최근 ${fmtMemberTime(m.last)}</span>
+          </span>
+        </button>
+      `).join('')}
+    </div>`;
+
+  wrap.querySelectorAll('.member-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const select = document.getElementById('filter-user');
+      select.value = chip.classList.contains('active') ? '' : chip.dataset.name;
+      renderFiltered();
+    });
+  });
+}
+
+function memberInitial(name) {
+  const s = (name || '').trim();
+  return s ? [...s][0].toUpperCase() : '?';
+}
+
+function fmtMemberTime(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay
+    ? d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
 }
 
 function renderGrid(captures) {

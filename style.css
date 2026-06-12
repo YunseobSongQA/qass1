@@ -421,6 +421,99 @@ body {
 
 .btn-hint:hover { background: #fde68a; }
 
+/* ── ROOM MEMBERS (참여자 목록) ──────────────────────────────────────────────── */
+.room-members {
+  max-width: 1100px;
+  margin: 20px auto 0;
+  padding: 0 24px;
+}
+
+.room-members-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.room-members-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.room-members-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.room-members-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.member-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px 7px 7px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform .15s, box-shadow .15s, border-color .15s, background .15s;
+}
+
+.member-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  border-color: #cbd5e1;
+}
+
+.member-chip.active {
+  border-color: var(--primary);
+  background: #eff6ff;
+}
+
+.member-avatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.member-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.member-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.member-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* ── CAPTURES GRID ───────────────────────────────────────────────────────────── */
 .captures-grid {
   display: grid;
@@ -853,10 +946,13 @@ body {
   background: #fff;
 }
 
-.preview-clip {
-  white-space: nowrap;
+/* 텍스트만 잘리게 하고 번호표(.preview-num)는 잘리지 않도록 안쪽 span에만 클립 적용 */
+.preview-mark-clip {
+  display: inline-block;
+  max-width: 170px;
   overflow: hidden;
-  max-width: 230px;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 .preview-num {
@@ -1314,6 +1410,11 @@ body {
   .search-input { min-width: 0; flex: 1; }
   .filter-select { max-width: 120px; flex-shrink: 0; }
   .count-label { width: 100%; margin-left: 0; order: 10; font-size: 12px; }
+
+  /* ── 참여자 목록 ── */
+  .room-members { padding: 0 12px; margin-top: 14px; }
+  .room-members-list { gap: 8px; }
+  .member-name { max-width: 110px; }
 
   /* ── Captures grid ── */
   .captures-grid { padding: 12px; gap: 12px; grid-template-columns: 1fr; }
