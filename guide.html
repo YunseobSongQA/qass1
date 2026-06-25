@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script>(function(){try{var t=localStorage.getItem('qass-theme');document.documentElement.setAttribute('data-theme',t==='dark'?'dark':'light');}catch(e){}})();</script>
   <title>QA 증적 관리 실무 가이드 — 증적이 살리는 프로젝트, 망치는 프로젝트</title>
   <meta name="description" content="QA 증적이 왜 필요한지, 무엇을 어떻게 남겨야 하는지, 실무에서 자주 하는 실수와 자동화 방법까지. 검수와 테스트 담당자를 위한 증적 관리 실무 가이드입니다." />
   <link rel="icon" type="image/svg+xml" href="logo.svg" />
@@ -20,6 +21,7 @@
         <a href="index.html#faq">FAQ</a>
         <a href="privacy.html">개인정보처리방침</a>
       </nav>
+      <button class="theme-toggle" type="button" aria-label="라이트/다크 모드 전환"><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg></button>
       <a href="app.html" class="btn-cta btn-cta-sm">앱 시작하기</a>
     </div>
   </header>
@@ -149,5 +151,6 @@
     </div>
   </footer>
 
+  <script src="theme.js"></script>
 </body>
 </html>
