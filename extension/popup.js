@@ -5,9 +5,11 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const TEST_ROOM_NAME = 'QASS 테스트 방';
 const TEST_ROOM_PASSWORD = 'qass1234';
+const SITE_URL = 'https://qass1.pages.dev';
 
 let isCapturing = false;
 let cachedHistory = [];
+let extCreateMode = false;
 
 // ── 초기화 ────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -15,7 +17,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-clear').addEventListener('click', onClear);
   document.getElementById('btn-dl-all').addEventListener('click', onDownloadAll);
   document.getElementById('btn-room-connect').addEventListener('click', onRoomConnect);
+  document.getElementById('btn-room-create').addEventListener('click', onRoomCreate);
   document.getElementById('btn-room-disconnect').addEventListener('click', onRoomDisconnect);
+  document.getElementById('btn-room-open').addEventListener('click', onRoomOpen);
+  document.getElementById('ext-mode-toggle').addEventListener('click', e => {
+    e.preventDefault();
+    setExtMode(!extCreateMode);
+  });
   document.getElementById('btn-ext-test-hint').addEventListener('click', () => {
     document.getElementById('ext-room-name').value = TEST_ROOM_NAME;
     document.getElementById('ext-room-password').value = TEST_ROOM_PASSWORD;
@@ -29,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (e.key === 'Enter') document.getElementById('ext-uploader-name').focus();
   });
   document.getElementById('ext-uploader-name').addEventListener('keydown', e => {
-    if (e.key === 'Enter') onRoomConnect();
+    if (e.key === 'Enter') (extCreateMode ? onRoomCreate() : onRoomConnect());
   });
 
   const resp = await chrome.runtime.sendMessage({ type: 'GET_STATUS' });
@@ -47,7 +55,7 @@ async function updateRoomUI() {
   document.getElementById('room-connect-form').classList.toggle('hidden', connected);
   if (connected) {
     document.getElementById('connected-room-name').textContent = roomSession.room_name;
-    document.getElementById('connected-uploader').textContent = `👤 ${roomSession.uploader_name}`;
+    document.getElementById('connected-uploader').textContent = `${roomSession.uploader_name}`;
   }
 }
 
@@ -102,9 +110,97 @@ async function onRoomConnect() {
   }
 }
 
+function setExtMode(create) {
+  extCreateMode = create;
+  document.getElementById('room-connect-title').textContent =
+    create ? '새 방 만들기' : '방에 연결하여 자동 업로드';
+  document.getElementById('btn-room-connect').classList.toggle('hidden', create);
+  document.getElementById('btn-room-create').classList.toggle('hidden', !create);
+  document.getElementById('btn-ext-test-hint').classList.toggle('hidden', create);
+  document.getElementById('ext-mode-toggle').textContent =
+    create ? '← 기존 방에 연결' : '처음이세요? + 새 방 만들기';
+  document.getElementById('ext-connect-error').classList.add('hidden');
+}
+
+async function onRoomCreate() {
+  const roomName = document.getElementById('ext-room-name').value.trim();
+  const password = document.getElementById('ext-room-password').value.trim();
+  const uploaderName = document.getElementById('ext-uploader-name').value.trim() || '익명';
+  const errEl = document.getElementById('ext-connect-error');
+  const btn = document.getElementById('btn-room-create');
+  errEl.classList.add('hidden');
+
+  if (!roomName) { showExtErr(errEl, '방 이름을 입력하세요.'); return; }
+  if (!password) { showExtErr(errEl, '비밀번호를 입력하세요.'); return; }
+
+  btn.textContent = '만드는 중…';
+  btn.disabled = true;
+
+  try {
+    // 연결이 방 이름으로 조회하므로 같은 이름의 방은 만들 수 없게 한다
+    const dupRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/rooms?room_name=eq.${encodeURIComponent(roomName)}&select=id`,
+      {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        },
+      }
+    );
+    const dup = await dupRes.json();
+    if (!dupRes.ok) throw new Error(dup.message || '방 조회 실패');
+    if (dup.length > 0) throw new Error('이미 같은 이름의 방이 있습니다. 다른 이름을 사용하세요.');
+
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rooms`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify({
+        room_name: roomName,
+        room_password: password,
+        created_by: uploaderName,
+      }),
+    });
+    const created = await res.json();
+    if (!res.ok) throw new Error(created.message || '방 만들기 실패');
+    const room = Array.isArray(created) ? created[0] : created;
+
+    await chrome.storage.local.set({
+      roomSession: {
+        room_id: room.id,
+        room_name: room.room_name,
+        uploader_name: uploaderName,
+      },
+    });
+    document.getElementById('ext-room-name').value = '';
+    document.getElementById('ext-room-password').value = '';
+    document.getElementById('ext-uploader-name').value = '';
+    setExtMode(false);
+    await updateRoomUI();
+  } catch (e) {
+    showExtErr(errEl, e.message);
+  } finally {
+    btn.textContent = '방 만들기 + 연결';
+    btn.disabled = false;
+  }
+}
+
 async function onRoomDisconnect() {
   await chrome.storage.local.remove('roomSession');
   await updateRoomUI();
+}
+
+async function onRoomOpen() {
+  const { roomSession } = await chrome.storage.local.get('roomSession');
+  if (!roomSession?.room_id) return;
+  const url = `${SITE_URL}/app.html` +
+    `?room=${encodeURIComponent(roomSession.room_id)}` +
+    `&name=${encodeURIComponent(roomSession.uploader_name || '')}`;
+  chrome.tabs.create({ url });
 }
 
 // ── 캡처 토글 ─────────────────────────────────────────────────────────────────
@@ -188,7 +284,7 @@ function renderList(history) {
     const badge = document.createElement('span');
     badge.className = 'cloud-badge';
     if (rec.uploaded) {
-      badge.className += ' uploaded'; badge.textContent = '☁ 업로드됨';
+      badge.className += ' uploaded'; badge.textContent = '업로드됨';
     } else if (rec.uploading) {
       badge.className += ' uploading'; badge.textContent = '↑ 업로드 중';
     } else if (rec.uploadFailed) {

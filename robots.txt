@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://qass1.pages.dev/sitemap.xml

@@ -22,8 +22,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindRoomsScreenEvents();
   bindRoomScreenEvents();
   bindModalEvents();
+  bindInspectEvents();
+  if (await tryDeepLink()) return;
   showScreen('login');
 });
+
+// ── 딥링크 (확장 프로그램에서 방 바로 열기) ──────────────────────────────────
+// app.html?room=<id>&name=<이름> — 확장에서 이미 비밀번호를 확인하고 연결된
+// 방이므로 별도 인증 없이 바로 입장한다.
+async function tryDeepLink() {
+  const params = new URLSearchParams(location.search);
+  const roomId = params.get('room');
+  if (!roomId) return false;
+  const name = (params.get('name') || '').trim() || '익명';
+  setLoading(true);
+  try {
+    const { data, error } = await db
+      .from('rooms')
+      .select('id, room_name, created_by, created_at')
+      .eq('id', roomId)
+      .single();
+    if (error || !data) return false;
+    currentUser = name;
+    currentUploaderName = name;
+    document.getElementById('rooms-user-badge').textContent = `${name}`;
+    enterRoom(data, name);
+    return true;
+  } catch (_) {
+    return false;
+  } finally {
+    setLoading(false);
+  }
+}
 
 // ── 로그인 ────────────────────────────────────────────────────────────────────
 function bindLoginEvents() {
@@ -37,7 +67,7 @@ async function onLogin() {
   const name = document.getElementById('login-name').value.trim() || '익명';
   currentUser = name;
   currentUploaderName = name;
-  document.getElementById('rooms-user-badge').textContent = `👤 ${name}`;
+  document.getElementById('rooms-user-badge').textContent = `${name}`;
   showScreen('rooms');
   await ensureTestRoom();
   await loadRooms();
@@ -48,6 +78,7 @@ function showScreen(name) {
   document.getElementById('login-screen').classList.toggle('hidden', name !== 'login');
   document.getElementById('rooms-screen').classList.toggle('hidden', name !== 'rooms');
   document.getElementById('room-screen').classList.toggle('hidden', name !== 'room');
+  document.getElementById('inspect-screen').classList.toggle('hidden', name !== 'inspect');
 }
 
 // ── 테스트 방 자동 생성 ──────────────────────────────────────────────────────
@@ -93,7 +124,9 @@ function renderRooms(rooms) {
     const isTest = room.room_name === TEST_ROOM_NAME;
     const date = room.created_at ? new Date(room.created_at).toLocaleDateString('ko-KR') : '';
     card.innerHTML = `
-      <div class="room-card-icon">${isTest ? '🧪' : '📁'}</div>
+      <div class="room-card-icon">${isTest
+        ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6M10 3v6.2L5.6 16.9A2 2 0 0 0 7.3 20h9.4a2 2 0 0 0 1.7-3.1L14 9.2V3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.2h7A1.5 1.5 0 0 1 19 8.7v8.8A1.5 1.5 0 0 1 17.5 19h-13A1.5 1.5 0 0 1 3 17.5v-11Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'}</div>
       <div class="room-card-info">
         <div class="room-card-name">${esc(room.room_name)}${isTest ? ' <span class="test-badge">테스트</span>' : ''}</div>
         <div class="room-card-meta">만든이: ${esc(room.created_by || '익명')} · ${date}</div>
@@ -263,7 +296,7 @@ function enterRoom(room, uploaderName) {
   currentUploaderName = uploaderName;
 
   document.getElementById('room-name-label').textContent = room.room_name;
-  document.getElementById('uploader-badge').textContent = `👤 ${uploaderName}`;
+  document.getElementById('uploader-badge').textContent = `${uploaderName}`;
   showScreen('room');
 
   allCaptures = [];
@@ -317,6 +350,16 @@ function bindModalEvents() {
   });
   document.getElementById('new-room-creator').addEventListener('keydown', e => {
     if (e.key === 'Enter') onCreateRoomSubmit();
+  });
+  document.getElementById('btn-issues-close').addEventListener('click', closeIssuesModal);
+  document.getElementById('btn-issues-dl').addEventListener('click', () => {
+    if (issuesModalCap) downloadCapture(issuesModalCap);
+  });
+  document.getElementById('issues-overlay-toggle').addEventListener('change', e => {
+    document.getElementById('issues-stage').classList.toggle('overlay-off', !e.target.checked);
+  });
+  document.getElementById('issues-modal').addEventListener('click', e => {
+    if (e.target === e.currentTarget) closeIssuesModal();
   });
 }
 
@@ -389,7 +432,72 @@ function renderFiltered() {
     return matchSearch && (!filterUser || name === filterUser);
   });
   document.getElementById('count-label').textContent = `${filtered.length}건`;
+  renderMembers();
   renderGrid(filtered);
+}
+
+// ── 참여자 목록 (누가 몇 건을 언제 올렸는지) ──────────────────────────────────
+function renderMembers() {
+  const wrap = document.getElementById('room-members');
+  if (!wrap) return;
+
+  const map = new Map();
+  allCaptures.forEach(c => {
+    const name = c.uploader_name || c.user_display_name || c.user_email || '익명';
+    const t = c.captured_at ? new Date(c.captured_at).getTime() : 0;
+    const m = map.get(name) || { name, count: 0, last: 0 };
+    m.count++;
+    if (t > m.last) m.last = t;
+    map.set(name, m);
+  });
+  const members = [...map.values()].sort((a, b) => b.last - a.last);
+
+  if (!members.length) {
+    wrap.classList.add('hidden');
+    wrap.innerHTML = '';
+    return;
+  }
+
+  const activeUser = document.getElementById('filter-user').value;
+  wrap.classList.remove('hidden');
+  wrap.innerHTML = `
+    <div class="room-members-head">
+      <span class="room-members-title">참여자 ${members.length}명</span>
+      <span class="room-members-hint">이름을 누르면 그 사람의 증적만 모아 봅니다</span>
+    </div>
+    <div class="room-members-list">
+      ${members.map(m => `
+        <button class="member-chip${m.name === activeUser ? ' active' : ''}" data-name="${esc(m.name)}" title="${esc(m.name)} · ${m.count}건">
+          <span class="member-avatar">${esc(memberInitial(m.name))}</span>
+          <span class="member-info">
+            <span class="member-name">${esc(m.name)}</span>
+            <span class="member-meta">${m.count}건 · 최근 ${fmtMemberTime(m.last)}</span>
+          </span>
+        </button>
+      `).join('')}
+    </div>`;
+
+  wrap.querySelectorAll('.member-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const select = document.getElementById('filter-user');
+      select.value = chip.classList.contains('active') ? '' : chip.dataset.name;
+      renderFiltered();
+    });
+  });
+}
+
+function memberInitial(name) {
+  const s = (name || '').trim();
+  return s ? [...s][0].toUpperCase() : '?';
+}
+
+function fmtMemberTime(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  const sameDay = d.toDateString() === new Date().toDateString();
+  return sameDay
+    ? d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    : d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
 }
 
 function renderGrid(captures) {
@@ -405,8 +513,11 @@ function renderGrid(captures) {
     const imgUrl = getPublicUrl(cap.image_path);
     const name = cap.uploader_name || cap.user_display_name || cap.user_email || '—';
     const time = cap.captured_at ? new Date(cap.captured_at).toLocaleString('ko-KR') : '—';
+    const issues = mergeIssues(cap.issues);
     card.innerHTML = `
-      <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기"></div>
+      <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기">
+        ${issues.length ? `<span class="badge-issues" title="자동 점검 이슈 ${issues.length}건 — 클릭하면 상세 보기">${issues.length}</span>` : ''}
+      </div>
       <div class="card-body">
         <div class="card-title" title="${esc(cap.title || '')}">${esc(cap.title || '—')}</div>
         <div class="card-url" title="${esc(cap.url || '')}">${esc(cap.url || '—')}</div>
@@ -418,6 +529,7 @@ function renderGrid(captures) {
       </div>
       <div class="card-actions">
         <button class="btn-sm" data-action="view">보기</button>
+        ${issues.length ? '<button class="btn-sm btn-issues" data-action="issues">장애 보기</button>' : ''}
         <button class="btn-sm btn-primary" data-action="dl">저장</button>
         <button class="btn-sm btn-danger" data-action="del">삭제</button>
       </div>
@@ -426,6 +538,11 @@ function renderGrid(captures) {
     card.querySelector('[data-action="view"]').addEventListener('click', () => window.open(imgUrl, '_blank'));
     card.querySelector('[data-action="dl"]').addEventListener('click', () => downloadCapture(cap));
     card.querySelector('[data-action="del"]').addEventListener('click', () => deleteCapture(cap));
+    card.querySelector('[data-action="issues"]')?.addEventListener('click', () => openIssuesModal(cap));
+    card.querySelector('.badge-issues')?.addEventListener('click', e => {
+      e.stopPropagation();
+      openIssuesModal(cap);
+    });
     grid.appendChild(card);
   });
 }
@@ -536,6 +653,370 @@ async function deleteCapture(cap) {
     alert('삭제 실패: ' + err.message);
   } finally {
     setLoading(false);
+  }
+}
+
+// ── 1차 자동 점검 (장애 보기) 모달 ───────────────────────────────────────────
+const ISSUE_TYPE_META = {
+  spacing: { label: '띄어쓰기', color: '#2563EB' },
+  spell:   { label: '맞춤법',  color: '#D97706' },
+  ui:      { label: 'UI장애',  color: '#E11D48' },
+};
+
+let issuesModalCap = null;
+
+// 같은 위치(거의 동일한 rectPct)·같은 타입 이슈는 박스가 겹쳐 보이므로 한 건으로 병합
+function mergeIssues(issues) {
+  const list = Array.isArray(issues) ? issues : [];
+  const merged = [];
+  for (const issue of list) {
+    const r = issue.rectPct;
+    const dup = r && merged.find(m => m.type === issue.type && m.rectPct &&
+      Math.abs(m.rectPct.x - r.x) < 0.5 && Math.abs(m.rectPct.y - r.y) < 0.5 &&
+      Math.abs(m.rectPct.w - r.w) < 1 && Math.abs(m.rectPct.h - r.h) < 1);
+    if (dup) {
+      if (issue.message && !(dup.message || '').includes(issue.message)) {
+        dup.message = (dup.message ? dup.message + ' · ' : '') + issue.message;
+      }
+    } else {
+      merged.push({ ...issue });
+    }
+  }
+  return merged;
+}
+
+function openIssuesModal(cap) {
+  issuesModalCap = cap;
+  const issues = mergeIssues(cap.issues);
+  document.getElementById('issues-modal-title').textContent =
+    `1차 자동 점검 — ${cap.title || cap.url || '캡처'} (${issues.length}건)`;
+
+  const stage = document.getElementById('issues-stage');
+  stage.querySelectorAll('.issue-box').forEach(el => el.remove());
+  stage.classList.remove('overlay-off');
+  document.getElementById('issues-overlay-toggle').checked = true;
+  document.getElementById('issues-image').src = getPublicUrl(cap.image_path);
+
+  const list = document.getElementById('issues-list');
+  list.innerHTML = '';
+
+  issues.forEach((issue, i) => {
+    const meta = ISSUE_TYPE_META[issue.type] || { label: issue.type || '기타', color: '#64748b' };
+    const num = i + 1;
+
+    // rectPct 가 없는(구버전) 캡처는 박스 없이 목록만 표시
+    if (issue.rectPct) {
+      const box = document.createElement('div');
+      box.className = 'issue-box';
+      box.dataset.idx = i;
+      box.style.left = issue.rectPct.x + '%';
+      box.style.top = issue.rectPct.y + '%';
+      box.style.width = issue.rectPct.w + '%';
+      box.style.height = issue.rectPct.h + '%';
+      box.style.borderColor = meta.color;
+      box.title = `${meta.label}: ${issue.message || ''}`;
+      box.innerHTML = `<span class="issue-box-num" style="background:${meta.color}">${num}</span>`;
+      box.addEventListener('click', () => highlightIssue(i, false));
+      stage.appendChild(box);
+    }
+
+    const item = document.createElement('div');
+    item.className = 'issue-item';
+    item.dataset.idx = i;
+    item.innerHTML = `
+      <span class="issue-num" style="background:${meta.color}">${num}</span>
+      <div class="issue-item-body">
+        <div class="issue-item-head">
+          <span class="issue-type" style="color:${meta.color}">${esc(meta.label)}</span>${esc(issue.message || '')}
+        </div>
+        ${issue.text ? `<div class="issue-text">${esc(issue.text)}</div>` : ''}
+      </div>
+    `;
+    item.addEventListener('click', () => highlightIssue(i, true));
+    list.appendChild(item);
+  });
+
+  if (!issues.length) {
+    list.innerHTML = '<div class="issues-empty">검출된 이슈가 없습니다.</div>';
+  }
+  document.getElementById('issues-modal').classList.remove('hidden');
+}
+
+function highlightIssue(idx, scrollToBox) {
+  document.querySelectorAll('#issues-stage .issue-box').forEach(b =>
+    b.classList.toggle('active', Number(b.dataset.idx) === idx));
+  document.querySelectorAll('#issues-list .issue-item').forEach(it =>
+    it.classList.toggle('active', Number(it.dataset.idx) === idx));
+  if (scrollToBox) {
+    const box = document.querySelector(`#issues-stage .issue-box[data-idx="${idx}"]`);
+    box?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+function closeIssuesModal() {
+  document.getElementById('issues-modal').classList.add('hidden');
+  document.getElementById('issues-image').src = '';
+  issuesModalCap = null;
+}
+
+// ── 1차 자동 점검 탭 ─────────────────────────────────────────────────────────
+// 분석은 캡처 시점에 끝나 captures.issues(JSONB)에 저장돼 있다.
+// 이 탭은 재분석 없이 저장된 issues를 모아 보여주기만 한다.
+let inspectRooms = [];
+let inspectCaptures = [];
+let inspectSelected = new Set();
+let inspectRoom = null;
+
+function bindInspectEvents() {
+  document.querySelectorAll('.main-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) return;
+      if (btn.dataset.tab === 'inspect') openInspectTab();
+      else { showScreen('rooms'); loadRooms(); }
+    });
+  });
+  document.getElementById('btn-feature-tour').addEventListener('click', openInspectTab);
+  document.getElementById('btn-brand-home-inspect').addEventListener('click', () => {
+    showScreen('rooms');
+    loadRooms();
+  });
+  document.getElementById('inspect-select-all').addEventListener('click', e => {
+    e.preventDefault();
+    const checks = document.querySelectorAll('.inspect-cap-check');
+    const allChecked = inspectCaptures.length > 0 && inspectSelected.size === inspectCaptures.length;
+    checks.forEach(c => {
+      if (c.checked === !allChecked) return;
+      c.checked = !allChecked;
+      c.dispatchEvent(new Event('change'));
+    });
+  });
+  document.getElementById('btn-inspect-results').addEventListener('click', showInspectResults);
+  document.getElementById('btn-inspect-reselect').addEventListener('click', () => {
+    showInspectStage('select');
+    document.getElementById('inspect-preview').classList.remove('hidden');
+  });
+}
+
+function showInspectStage(stage) {
+  document.getElementById('inspect-select').classList.toggle('hidden', stage !== 'select');
+  document.getElementById('inspect-results').classList.toggle('hidden', stage !== 'results');
+}
+
+async function openInspectTab() {
+  showScreen('inspect');
+  document.getElementById('inspect-user-badge').textContent = currentUser ? `${currentUser}` : '';
+  showInspectStage('select');
+  document.getElementById('inspect-preview').classList.remove('hidden');
+  inspectRoom = null;
+  inspectSelected.clear();
+  document.getElementById('inspect-captures-section').classList.add('hidden');
+  await loadInspectRooms();
+}
+
+async function loadInspectRooms() {
+  const wrap = document.getElementById('inspect-rooms');
+  wrap.innerHTML = '<div class="empty-state">폴더를 불러오는 중…</div>';
+  try {
+    const [roomsRes, capsRes] = await Promise.all([
+      db.from('rooms').select('id, room_name, created_by, created_at').order('created_at', { ascending: false }),
+      db.from('captures').select('room_id'),
+    ]);
+    if (roomsRes.error) throw roomsRes.error;
+    if (capsRes.error) throw capsRes.error;
+    const counts = {};
+    (capsRes.data || []).forEach(c => { counts[c.room_id] = (counts[c.room_id] || 0) + 1; });
+    inspectRooms = roomsRes.data || [];
+    renderInspectRooms(counts);
+  } catch (err) {
+    wrap.innerHTML = `<div class="empty-state">오류: ${esc(err.message)}</div>`;
+  }
+}
+
+function renderInspectRooms(counts) {
+  const wrap = document.getElementById('inspect-rooms');
+  wrap.innerHTML = '';
+  if (!inspectRooms.length) {
+    wrap.innerHTML = '<div class="empty-state">아직 방이 없습니다.</div>';
+    return;
+  }
+  inspectRooms.forEach(room => {
+    const row = document.createElement('div');
+    row.className = 'inspect-room-row';
+    row.dataset.id = room.id;
+    row.innerHTML = `
+      <span class="inspect-room-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.2h7A1.5 1.5 0 0 1 19 8.7v8.8A1.5 1.5 0 0 1 17.5 19h-13A1.5 1.5 0 0 1 3 17.5v-11Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+      <span class="inspect-room-name">${esc(room.room_name)}</span>
+      <span class="inspect-room-count">캡처 ${counts[room.id] || 0}개</span>
+    `;
+    row.addEventListener('click', () => selectInspectRoom(room));
+    wrap.appendChild(row);
+  });
+}
+
+async function selectInspectRoom(room) {
+  inspectRoom = room;
+  inspectSelected.clear();
+  document.querySelectorAll('.inspect-room-row').forEach(r =>
+    r.classList.toggle('active', r.dataset.id === String(room.id)));
+
+  document.getElementById('inspect-captures-section').classList.remove('hidden');
+  document.getElementById('inspect-room-label').textContent = room.room_name;
+  const grid = document.getElementById('inspect-captures');
+  grid.innerHTML = '<div class="empty-state">캡처를 불러오는 중…</div>';
+  updateInspectResultBtn();
+  try {
+    const { data, error } = await db
+      .from('captures')
+      .select('*')
+      .eq('room_id', room.id)
+      .order('captured_at', { ascending: false });
+    if (error) throw error;
+    inspectCaptures = data || [];
+    renderInspectCaptures();
+  } catch (err) {
+    grid.innerHTML = `<div class="empty-state">오류: ${esc(err.message)}</div>`;
+  }
+}
+
+function renderInspectCaptures() {
+  const grid = document.getElementById('inspect-captures');
+  grid.innerHTML = '';
+  if (!inspectCaptures.length) {
+    grid.innerHTML = '<div class="empty-state">이 폴더에 캡처가 없습니다.</div>';
+    return;
+  }
+  inspectCaptures.forEach(cap => {
+    const issues = mergeIssues(cap.issues);
+    const card = document.createElement('label');
+    card.className = 'inspect-cap-card';
+    card.innerHTML = `
+      <input type="checkbox" class="inspect-cap-check" />
+      <div class="inspect-cap-thumb" style="background-image:url('${esc(getPublicUrl(cap.image_path))}')">
+        ${issues.length ? `<span class="badge-issues">${issues.length}</span>` : ''}
+      </div>
+      <div class="inspect-cap-title" title="${esc(cap.title || cap.url || '')}">${esc(cap.title || cap.url || '—')}</div>
+    `;
+    const check = card.querySelector('.inspect-cap-check');
+    check.addEventListener('change', () => {
+      if (check.checked) inspectSelected.add(cap.id);
+      else inspectSelected.delete(cap.id);
+      card.classList.toggle('selected', check.checked);
+      updateInspectResultBtn();
+    });
+    grid.appendChild(card);
+  });
+}
+
+function updateInspectResultBtn() {
+  const btn = document.getElementById('btn-inspect-results');
+  btn.textContent = `선택한 ${inspectSelected.size}개 결과 보기`;
+  btn.disabled = inspectSelected.size === 0;
+}
+
+function showInspectResults() {
+  const caps = inspectCaptures.filter(c => inspectSelected.has(c.id));
+  if (!caps.length) return;
+  showInspectStage('results');
+
+  const totals = { spacing: 0, spell: 0, ui: 0 };
+  caps.forEach(c => mergeIssues(c.issues).forEach(issue => {
+    if (totals[issue.type] !== undefined) totals[issue.type]++;
+  }));
+
+  document.getElementById('inspect-chips').innerHTML = ['spacing', 'spell', 'ui'].map(t => {
+    const meta = ISSUE_TYPE_META[t];
+    return `<span class="inspect-chip" style="border-color:${meta.color};color:${meta.color}">${meta.label} ${totals[t]}</span>`;
+  }).join('');
+
+  // 선택한 캡처 전체에 이슈가 하나도 없으면 예시 미리보기 + 안내를 유지
+  const totalIssues = totals.spacing + totals.spell + totals.ui;
+  document.getElementById('inspect-results-empty').classList.toggle('hidden', totalIssues !== 0);
+  document.getElementById('inspect-preview').classList.toggle('hidden', totalIssues !== 0);
+
+  const wrap = document.getElementById('inspect-result-cards');
+  wrap.innerHTML = '';
+  caps.forEach(cap => wrap.appendChild(buildInspectResultCard(cap)));
+}
+
+function buildInspectResultCard(cap) {
+  const issues = mergeIssues(cap.issues);
+  const imgUrl = getPublicUrl(cap.image_path);
+  const card = document.createElement('div');
+  card.className = 'inspect-result-card';
+
+  const boxesHtml = issues.map((issue, i) => {
+    if (!issue.rectPct) return '';
+    const meta = ISSUE_TYPE_META[issue.type] || { label: issue.type || '기타', color: '#64748b' };
+    return `<div class="issue-box" data-idx="${i}" title="${esc(meta.label)}: ${esc(issue.message || '')}"
+      style="left:${issue.rectPct.x}%;top:${issue.rectPct.y}%;width:${issue.rectPct.w}%;height:${issue.rectPct.h}%;border-color:${meta.color}">
+      <span class="issue-box-num" style="background:${meta.color}">${i + 1}</span>
+    </div>`;
+  }).join('');
+
+  const listHtml = issues.length ? issues.map((issue, i) => {
+    const meta = ISSUE_TYPE_META[issue.type] || { label: issue.type || '기타', color: '#64748b' };
+    const fix = (issue.type !== 'ui' && issue.wrong && issue.right)
+      ? `<div class="issue-fix"><s>${esc(issue.wrong)}</s> → <b>${esc(issue.right)}</b></div>` : '';
+    return `
+      <div class="issue-item" data-idx="${i}">
+        <span class="issue-num" style="background:${meta.color}">${i + 1}</span>
+        <div class="issue-item-body">
+          <div class="issue-item-head"><span class="issue-type" style="color:${meta.color}">${esc(meta.label)}</span>${esc(issue.message || '')}</div>
+          ${fix}
+          ${issue.text ? `<div class="issue-text">${esc(issue.text)}</div>` : ''}
+        </div>
+      </div>`;
+  }).join('') : '<div class="issues-empty">이상 없음 — 검출된 이슈가 없습니다.</div>';
+
+  card.innerHTML = `
+    <div class="inspect-result-head">
+      <div class="inspect-result-title" title="${esc(cap.title || cap.url || '')}">${esc(cap.title || cap.url || '캡처')}</div>
+      ${issues.length
+        ? `<span class="inspect-result-badge">이슈 ${issues.length}건</span>`
+        : '<span class="inspect-result-badge ok">이상 없음</span>'}
+      ${issues.length ? '<button class="btn-sm inspect-result-zoom">크게 보기</button>' : ''}
+      <button class="btn-sm btn-primary inspect-result-dl"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>원본 저장</button>
+    </div>
+    <div class="inspect-compare">
+      <div class="inspect-pane">
+        <div class="inspect-pane-label">검증 전 (원본)</div>
+        <div class="inspect-pane-scroll"><img src="${esc(imgUrl)}" alt="원본" loading="lazy" /></div>
+      </div>
+      <div class="inspect-pane">
+        <div class="inspect-pane-label">검증 후 (자동 점검 표시) ${issues.length ? '<span class="inspect-pane-hint">— 클릭하면 크게 보기</span>' : ''}</div>
+        <div class="inspect-pane-scroll ${issues.length ? 'inspect-pane-clickable' : ''}">
+          <div class="inspect-stage">
+            <img src="${esc(imgUrl)}" alt="점검 결과" loading="lazy" />
+            ${boxesHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="inspect-issue-list">${listHtml}</div>
+  `;
+
+  card.querySelector('.inspect-result-dl').addEventListener('click', () => downloadCapture(cap));
+  card.querySelector('.inspect-result-zoom')?.addEventListener('click', () => openIssuesModal(cap));
+  card.querySelector('.inspect-pane-clickable')?.addEventListener('click', () => openIssuesModal(cap));
+  card.querySelectorAll('.issue-item[data-idx]').forEach(item =>
+    item.addEventListener('click', () => highlightInspectIssue(card, Number(item.dataset.idx))));
+  card.querySelectorAll('.issue-box').forEach(box =>
+    box.addEventListener('click', e => {
+      e.stopPropagation();
+      highlightInspectIssue(card, Number(box.dataset.idx));
+    }));
+  return card;
+}
+
+function highlightInspectIssue(card, idx) {
+  card.querySelectorAll('.issue-box').forEach(b =>
+    b.classList.toggle('active', Number(b.dataset.idx) === idx));
+  card.querySelectorAll('.issue-item').forEach(it =>
+    it.classList.toggle('active', Number(it.dataset.idx) === idx));
+  const box = card.querySelector(`.issue-box[data-idx="${idx}"]`);
+  if (box) {
+    const pane = box.closest('.inspect-pane-scroll');
+    if (pane) pane.scrollTop = Math.max(0, box.offsetTop - pane.clientHeight / 2);
   }
 }
 

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QASS 사용 가이드 — 설치부터 자동 점검까지</title>
+  <meta name="description" content="QASS 시작 가이드. 크롬 확장 프로그램 설치, 방 만들기, 자동 캡처, 1차 자동 점검 결과 확인까지 단계별로 설명합니다." />
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link rel="stylesheet" href="landing.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="site-header-inner">
+      <a href="index.html" class="site-logo"><svg class="logo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="2"/><path d="M7.4 12.3l3 3 6.2-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>QASS</a>
+      <nav class="site-nav">
+        <a href="usage.html" class="active">사용 가이드</a>
+        <a href="guide.html">QA 실무 가이드</a>
+        <a href="index.html#faq">FAQ</a>
+        <a href="privacy.html">개인정보처리방침</a>
+      </nav>
+      <a href="app.html" class="btn-cta btn-cta-sm">앱 시작하기</a>
+    </div>
+  </header>
+
+  <main class="page-wrap prose">
+    <h1 class="page-title">QASS 사용 가이드</h1>
+    <p class="page-date">설치부터 자동 점검 결과 확인까지, 처음 쓰는 분을 위한 안내</p>
+
+    <div class="callout">
+      <strong>요약 — ① 대시보드에서 방 만들기 → ② 확장 프로그램 설치·연결 → ③ 시작 버튼 →
+      평소처럼 테스트</strong>. 캡처와 1차 점검은 자동으로 따라옵니다.
+    </div>
+
+    <h2>1. 대시보드 입장하기</h2>
+    <p>
+      <a href="app.html">QASS 앱</a>에 접속해 이름을 입력하면 바로 입장됩니다. 이메일이나
+      비밀번호 가입 절차는 없습니다. 이름을 비워두면 "익명"으로 입장하지만, 팀과 함께 쓴다면
+      누가 어떤 증적을 올렸는지 구분할 수 있도록 실명이나 닉네임 사용을 권장합니다.
+    </p>
+
+    <h2>2. 방 만들기</h2>
+    <p>
+      방(Room)은 증적이 모이는 공간입니다. 보통 프로젝트 단위 또는 테스트 회차 단위
+      (예: "1차 통합테스트", "결제 모듈 QA")로 만듭니다.
+    </p>
+    <ol>
+      <li>대시보드 우측 상단의 <strong>+ 방 만들기</strong>를 누릅니다.</li>
+      <li>방 이름과 비밀번호를 정합니다. 비밀번호를 아는 사람만 입장할 수 있습니다.</li>
+      <li>팀원에게 방 이름과 비밀번호를 공유합니다.</li>
+    </ol>
+    <p>
+      처음 둘러볼 때는 미리 준비된 <strong>QASS 테스트 방</strong>을 이용해도 됩니다. 입장
+      모달의 <strong>?</strong> 버튼을 누르면 테스트 방 정보가 자동 입력됩니다.
+    </p>
+
+    <h2>3. 크롬 확장 프로그램 설치</h2>
+    <ol>
+      <li>크롬 주소창에 <strong>chrome://extensions</strong> 를 입력해 확장 프로그램 페이지를 엽니다.</li>
+      <li>우측 상단의 <strong>개발자 모드</strong>를 켭니다.</li>
+      <li><strong>압축해제된 확장 프로그램을 로드합니다</strong>를 누르고 QASS 확장 폴더(<code>extension</code>)를 선택합니다.</li>
+      <li>툴바에 "QA 증적 캡처" 아이콘이 나타나면 설치 완료입니다.</li>
+    </ol>
+
+    <h2>4. 방에 연결하고 캡처 시작</h2>
+    <ol>
+      <li>확장 아이콘을 눌러 팝업을 엽니다.</li>
+      <li>상단의 연결 폼에 <strong>방 이름·비밀번호·내 이름</strong>을 입력하고 <strong>연결</strong>을 누릅니다.
+          방이 아직 없다면 <strong>"처음이세요? + 새 방 만들기"</strong>를 눌러 팝업에서 바로 만들 수 있습니다.</li>
+      <li><strong>▶ 시작</strong> 버튼을 누릅니다.</li>
+    </ol>
+    <p>
+      이제 평소처럼 테스트하면 됩니다. <strong>탭을 전환하거나 페이지를 스크롤할 때마다</strong>
+      풀페이지 캡처가 자동으로 생성되어 연결된 방에 업로드됩니다. 같은 방에서 같은 URL을 다시
+      캡처하면 기존 항목이 최신 캡처로 교체되어 중복이 쌓이지 않습니다. 테스트가 끝나면
+      <strong>■ 종료</strong>를 누르세요.
+    </p>
+
+    <h2>5. 대시보드에서 증적 관리</h2>
+    <ul>
+      <li><strong>검색·필터</strong> — URL이나 페이지 제목으로 검색하고, 업로더별로 필터링할 수 있습니다.</li>
+      <li><strong>다운로드</strong> — 캡처를 개별 저장하거나, 현재 필터 결과 전체를 ZIP으로 받을 수 있습니다.</li>
+      <li><strong>수동 업로드</strong> — 모바일 촬영 이미지 등 확장 밖에서 만든 증적도 상단 업로드 버튼으로 추가할 수 있습니다.</li>
+      <li><strong>실시간 동기화</strong> — 팀원이 캡처를 올리면 새로고침 없이 즉시 목록에 나타납니다.</li>
+    </ul>
+
+    <h2>6. 1차 자동 점검 결과 확인</h2>
+    <p>
+      캡처 시점에 페이지의 텍스트와 화면 요소가 자동으로 검사되어, 발견된 이슈가 캡처와 함께
+      저장됩니다. 확인 방법은 두 가지입니다.
+    </p>
+    <ul>
+      <li><strong>캡처 카드에서</strong> — 이슈가 있는 캡처에는 이슈 수 배지가 표시되고, "장애 보기"를 누르면
+          원본 위에 이슈 위치가 번호 박스로 표시됩니다.</li>
+      <li><strong>1차 자동 점검 탭에서</strong> — 상단 탭에서 폴더(방)와 캡처를 선택하면 띄어쓰기·맞춤법·UI
+          장애별 합산 결과와 함께, 캡처별 검증 전·후 비교 화면을 볼 수 있습니다.</li>
+    </ul>
+    <p>
+      이슈 분류는 색으로 구분됩니다: <strong style="color:#2563EB">띄어쓰기(파랑)</strong>,
+      <strong style="color:#D97706">맞춤법(주황)</strong>,
+      <strong style="color:#E11D48">UI 장애(빨강)</strong>.
+      맞춤법·띄어쓰기 이슈는 "틀린 표기 → 올바른 표기"로 교정안까지 함께 표시됩니다.
+    </p>
+
+    <div class="callout">
+      <strong>참고 —</strong> 자동 점검은 1차 스크리닝 도구입니다. 룰 기반 검사라 모든 오류를 찾지는 못하며, 최종
+      판단은 사람의 확인을 거치는 것을 권장합니다. 증적 이미지 원본은 어떤 경우에도 수정되지
+      않습니다.
+    </div>
+
+    <h2>자주 막히는 부분</h2>
+    <h3>캡처가 업로드되지 않아요</h3>
+    <p>
+      확장 팝업에서 방 연결 상태를 먼저 확인하세요. 연결이 풀려 있으면 캡처는 로컬 기록에만
+      남습니다. 연결돼 있는데도 실패한다면 팝업의 캡처 목록에서 "업로드 실패" 배지를 확인할
+      수 있습니다.
+    </p>
+    <h3>이슈가 하나도 검출되지 않아요</h3>
+    <p>
+      정상일 수 있습니다. 자동 점검은 캡처 시점에 수행되므로, 점검 기능이 추가되기 전에 올린
+      캡처에는 결과가 없습니다. 새로 캡처하면 점검 결과가 함께 저장됩니다.
+    </p>
+
+    <p style="margin-top:40px">
+      <a href="app.html" class="btn-cta">QASS 시작하기 →</a>
+    </p>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="footer-brand">
+        <div class="site-logo"><svg class="logo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="2"/><path d="M7.4 12.3l3 3 6.2-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>QASS</div>
+        <p>팀을 위한 QA 증적 관리 플랫폼</p>
+      </div>
+      <div class="footer-links">
+        <a href="app.html">앱 시작하기</a>
+        <a href="usage.html">사용 가이드</a>
+        <a href="guide.html">QA 실무 가이드</a>
+        <a href="privacy.html">개인정보처리방침</a>
+      </div>
+      <div class="footer-contact">
+        <p>문의: <a href="mailto:dwa3432@gmail.com">dwa3432@gmail.com</a></p>
+        <p class="footer-copy">© 2026 QASS. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
