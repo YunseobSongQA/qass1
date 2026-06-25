@@ -55,7 +55,7 @@ async function updateRoomUI() {
   document.getElementById('room-connect-form').classList.toggle('hidden', connected);
   if (connected) {
     document.getElementById('connected-room-name').textContent = roomSession.room_name;
-    document.getElementById('connected-uploader').textContent = `👤 ${roomSession.uploader_name}`;
+    document.getElementById('connected-uploader').textContent = `${roomSession.uploader_name}`;
   }
 }
 
@@ -113,7 +113,7 @@ async function onRoomConnect() {
 function setExtMode(create) {
   extCreateMode = create;
   document.getElementById('room-connect-title').textContent =
-    create ? '📁 새 방 만들기' : '📁 방에 연결하여 자동 업로드';
+    create ? '새 방 만들기' : '방에 연결하여 자동 업로드';
   document.getElementById('btn-room-connect').classList.toggle('hidden', create);
   document.getElementById('btn-room-create').classList.toggle('hidden', !create);
   document.getElementById('btn-ext-test-hint').classList.toggle('hidden', create);
@@ -284,7 +284,7 @@ function renderList(history) {
     const badge = document.createElement('span');
     badge.className = 'cloud-badge';
     if (rec.uploaded) {
-      badge.className += ' uploaded'; badge.textContent = '☁ 업로드됨';
+      badge.className += ' uploaded'; badge.textContent = '업로드됨';
     } else if (rec.uploading) {
       badge.className += ' uploading'; badge.textContent = '↑ 업로드 중';
     } else if (rec.uploadFailed) {

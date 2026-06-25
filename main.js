@@ -45,7 +45,7 @@ async function tryDeepLink() {
     if (error || !data) return false;
     currentUser = name;
     currentUploaderName = name;
-    document.getElementById('rooms-user-badge').textContent = `👤 ${name}`;
+    document.getElementById('rooms-user-badge').textContent = `${name}`;
     enterRoom(data, name);
     return true;
   } catch (_) {
@@ -67,7 +67,7 @@ async function onLogin() {
   const name = document.getElementById('login-name').value.trim() || '익명';
   currentUser = name;
   currentUploaderName = name;
-  document.getElementById('rooms-user-badge').textContent = `👤 ${name}`;
+  document.getElementById('rooms-user-badge').textContent = `${name}`;
   showScreen('rooms');
   await ensureTestRoom();
   await loadRooms();
@@ -124,7 +124,9 @@ function renderRooms(rooms) {
     const isTest = room.room_name === TEST_ROOM_NAME;
     const date = room.created_at ? new Date(room.created_at).toLocaleDateString('ko-KR') : '';
     card.innerHTML = `
-      <div class="room-card-icon">${isTest ? '🧪' : '📁'}</div>
+      <div class="room-card-icon">${isTest
+        ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6M10 3v6.2L5.6 16.9A2 2 0 0 0 7.3 20h9.4a2 2 0 0 0 1.7-3.1L14 9.2V3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.2h7A1.5 1.5 0 0 1 19 8.7v8.8A1.5 1.5 0 0 1 17.5 19h-13A1.5 1.5 0 0 1 3 17.5v-11Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'}</div>
       <div class="room-card-info">
         <div class="room-card-name">${esc(room.room_name)}${isTest ? ' <span class="test-badge">테스트</span>' : ''}</div>
         <div class="room-card-meta">만든이: ${esc(room.created_by || '익명')} · ${date}</div>
@@ -294,7 +296,7 @@ function enterRoom(room, uploaderName) {
   currentUploaderName = uploaderName;
 
   document.getElementById('room-name-label').textContent = room.room_name;
-  document.getElementById('uploader-badge').textContent = `👤 ${uploaderName}`;
+  document.getElementById('uploader-badge').textContent = `${uploaderName}`;
   showScreen('room');
 
   allCaptures = [];
@@ -460,7 +462,7 @@ function renderMembers() {
   wrap.classList.remove('hidden');
   wrap.innerHTML = `
     <div class="room-members-head">
-      <span class="room-members-title">👥 참여자 ${members.length}명</span>
+      <span class="room-members-title">참여자 ${members.length}명</span>
       <span class="room-members-hint">이름을 누르면 그 사람의 증적만 모아 봅니다</span>
     </div>
     <div class="room-members-list">
@@ -514,7 +516,7 @@ function renderGrid(captures) {
     const issues = mergeIssues(cap.issues);
     card.innerHTML = `
       <div class="card-thumb" style="background-image:url('${esc(imgUrl)}')" title="클릭하면 원본 이미지 열기">
-        ${issues.length ? `<span class="badge-issues" title="자동 점검 이슈 ${issues.length}건 — 클릭하면 상세 보기">⚠${issues.length}</span>` : ''}
+        ${issues.length ? `<span class="badge-issues" title="자동 점검 이슈 ${issues.length}건 — 클릭하면 상세 보기">${issues.length}</span>` : ''}
       </div>
       <div class="card-body">
         <div class="card-title" title="${esc(cap.title || '')}">${esc(cap.title || '—')}</div>
@@ -802,7 +804,7 @@ function showInspectStage(stage) {
 
 async function openInspectTab() {
   showScreen('inspect');
-  document.getElementById('inspect-user-badge').textContent = currentUser ? `👤 ${currentUser}` : '';
+  document.getElementById('inspect-user-badge').textContent = currentUser ? `${currentUser}` : '';
   showInspectStage('select');
   document.getElementById('inspect-preview').classList.remove('hidden');
   inspectRoom = null;
@@ -842,7 +844,7 @@ function renderInspectRooms(counts) {
     row.className = 'inspect-room-row';
     row.dataset.id = room.id;
     row.innerHTML = `
-      <span class="inspect-room-icon">📁</span>
+      <span class="inspect-room-icon"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.2h7A1.5 1.5 0 0 1 19 8.7v8.8A1.5 1.5 0 0 1 17.5 19h-13A1.5 1.5 0 0 1 3 17.5v-11Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
       <span class="inspect-room-name">${esc(room.room_name)}</span>
       <span class="inspect-room-count">캡처 ${counts[room.id] || 0}개</span>
     `;
@@ -890,7 +892,7 @@ function renderInspectCaptures() {
     card.innerHTML = `
       <input type="checkbox" class="inspect-cap-check" />
       <div class="inspect-cap-thumb" style="background-image:url('${esc(getPublicUrl(cap.image_path))}')">
-        ${issues.length ? `<span class="badge-issues">⚠${issues.length}</span>` : ''}
+        ${issues.length ? `<span class="badge-issues">${issues.length}</span>` : ''}
       </div>
       <div class="inspect-cap-title" title="${esc(cap.title || cap.url || '')}">${esc(cap.title || cap.url || '—')}</div>
     `;
@@ -972,8 +974,8 @@ function buildInspectResultCard(cap) {
       ${issues.length
         ? `<span class="inspect-result-badge">이슈 ${issues.length}건</span>`
         : '<span class="inspect-result-badge ok">이상 없음</span>'}
-      ${issues.length ? '<button class="btn-sm inspect-result-zoom">🔍 크게 보기</button>' : ''}
-      <button class="btn-sm btn-primary inspect-result-dl">⬇ 원본 저장</button>
+      ${issues.length ? '<button class="btn-sm inspect-result-zoom">크게 보기</button>' : ''}
+      <button class="btn-sm btn-primary inspect-result-dl"><svg class="btn-ico" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v11m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 18.5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>원본 저장</button>
     </div>
     <div class="inspect-compare">
       <div class="inspect-pane">

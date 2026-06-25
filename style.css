@@ -1,19 +1,19 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #f8fafc;
+  --bg: #f6f6f4;
   --surface: #ffffff;
-  --border: #e2e8f0;
-  --text: #0f172a;
-  --text-muted: #64748b;
-  --primary: #3b82f6;
-  --primary-dark: #2563eb;
-  --danger: #ef4444;
-  --success: #22c55e;
-  --grad: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-  --radius: 20px;
-  --shadow-sm: 0 1px 3px rgba(15,23,42,.06);
-  --shadow-md: 0 10px 30px rgba(15,23,42,.10);
+  --border: #e6e6e2;
+  --text: #1a1a1a;
+  --text-muted: #6b6b6b;
+  --primary: #1a1a1a;
+  --primary-dark: #000000;
+  --danger: #c0392b;
+  --success: #1f7a4d;
+  --grad: #141414;
+  --radius: 16px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
+  --shadow-md: 0 10px 28px rgba(0,0,0,.09);
 }
 
 body {
@@ -38,8 +38,7 @@ body {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(50% 40% at 50% 0%, rgba(59,130,246,.14) 0%, transparent 70%),
-    radial-gradient(35% 35% at 80% 15%, rgba(124,58,237,.10) 0%, transparent 70%);
+    radial-gradient(50% 40% at 50% 0%, rgba(0,0,0,.05) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -58,14 +57,20 @@ body {
 }
 
 .login-logo {
-  font-size: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 32px;
   font-weight: 800;
-  background: var(--grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text);
   text-align: center;
-  letter-spacing: -1px;
+  letter-spacing: -1.2px;
+}
+
+.login-logo .logo-mark {
+  width: 30px;
+  height: 30px;
 }
 
 .login-subtitle {
@@ -88,7 +93,7 @@ body {
   background: var(--surface);
 }
 
-.login-card input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+.login-card input[type="text"]:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
 
 .login-hint {
   font-size: 12px;
@@ -99,10 +104,11 @@ body {
 
 /* ── TOPBAR ──────────────────────────────────────────────────────────────────── */
 .topbar {
-  background: rgba(15, 23, 42, .88);
+  background: rgba(255, 255, 255, .85);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: #fff;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -114,19 +120,24 @@ body {
 }
 
 .topbar-brand {
-  font-size: 21px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
   font-weight: 800;
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  letter-spacing: -0.5px;
+  color: var(--text);
+  letter-spacing: -0.04em;
   flex-shrink: 0;
+}
+
+.topbar-brand .logo-mark {
+  width: 21px;
+  height: 21px;
 }
 
 .topbar-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .topbar-center {
@@ -139,18 +150,18 @@ body {
 .room-name-label {
   font-size: 15px;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--text);
 }
 
 .realtime-badge {
   font-size: 12px;
-  color: #4ade80;
+  color: #1f7a4d;
   font-weight: 500;
 }
 
 .uploader-badge {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 .topbar-right {
@@ -172,7 +183,7 @@ body {
   position: absolute;
   inset: 0 0 auto;
   height: 160%;
-  background: radial-gradient(50% 60% at 50% 0%, rgba(59,130,246,.12) 0%, transparent 70%);
+  background: radial-gradient(50% 60% at 50% 0%, rgba(0,0,0,.045) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -180,9 +191,9 @@ body {
   display: inline-block;
   font-size: 13px;
   font-weight: 600;
-  color: var(--primary-dark);
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
   padding: 6px 16px;
   border-radius: 999px;
   margin-bottom: 16px;
@@ -197,10 +208,8 @@ body {
 }
 
 .grad-text {
-  background: var(--grad);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text);
+  background: linear-gradient(transparent 66%, rgba(0,0,0,.08) 0);
 }
 
 .rooms-hero-sub {
@@ -233,13 +242,32 @@ body {
 .room-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-3px);
-  border-color: #cbd5e1;
+  border-color: #cfcfca;
 }
 
 .room-card-icon {
-  font-size: 28px;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  background: #f1f1ed;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.room-card-icon svg { width: 20px; height: 20px; }
+
+.inspect-room-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
+
+.inspect-room-icon svg { width: 18px; height: 18px; }
 
 .room-card-info {
   flex: 1;
@@ -257,11 +285,11 @@ body {
 
 .test-badge {
   font-size: 11px;
-  background: #fef9c3;
-  color: #a16207;
+  background: #ededea;
+  color: #555;
   padding: 2px 8px;
   border-radius: 999px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .room-card-meta {
@@ -298,7 +326,7 @@ body {
   transition: border-color .15s, box-shadow .15s;
 }
 
-.search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+.search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
 
 .filter-select {
   padding: 9px 14px;
@@ -319,7 +347,18 @@ body {
 }
 
 /* ── BUTTONS ─────────────────────────────────────────────────────────────────── */
+.btn-ico {
+  width: 15px;
+  height: 15px;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+
 .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
   padding: 8px 16px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -332,18 +371,18 @@ body {
   white-space: nowrap;
 }
 
-.btn-sm:hover { background: var(--bg); border-color: #cbd5e1; }
+.btn-sm:hover { background: var(--bg); border-color: #cfcfca; }
 
 .btn-primary {
   background: var(--grad) !important;
   color: #fff !important;
   border-color: transparent !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, .3);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
 }
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, .42);
+  box-shadow: 0 8px 20px rgba(0,0,0,.26);
   filter: brightness(1.03);
 }
 
@@ -375,13 +414,13 @@ body {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(37, 99, 235, .3);
+  box-shadow: 0 8px 24px rgba(0,0,0,.18);
   transition: transform .15s, box-shadow .15s, filter .15s;
 }
 
 .btn-auth:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(37, 99, 235, .42);
+  box-shadow: 0 12px 28px rgba(0,0,0,.26);
   filter: brightness(1.03);
 }
 .btn-auth:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; filter: none; }
@@ -400,18 +439,18 @@ body {
   transition: all .15s;
 }
 
-.btn-cancel:hover { background: var(--bg); border-color: #cbd5e1; }
+.btn-cancel:hover { background: var(--bg); border-color: #cfcfca; }
 
 .btn-hint {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  background: #fef9c3;
-  border: 1px solid #fde68a;
+  background: #f1f1ed;
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 14px;
   font-weight: 700;
-  color: #92400e;
+  color: var(--text);
   cursor: pointer;
   transition: background .15s;
   display: flex;
@@ -419,7 +458,7 @@ body {
   justify-content: center;
 }
 
-.btn-hint:hover { background: #fde68a; }
+.btn-hint:hover { background: #e6e6e2; }
 
 /* ── ROOM MEMBERS (참여자 목록) ──────────────────────────────────────────────── */
 .room-members {
@@ -469,12 +508,12 @@ body {
 .member-chip:hover {
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
-  border-color: #cbd5e1;
+  border-color: #cfcfca;
 }
 
 .member-chip.active {
   border-color: var(--primary);
-  background: #eff6ff;
+  background: #f1f1ed;
 }
 
 .member-avatar {
@@ -536,7 +575,7 @@ body {
 .capture-card:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-4px);
-  border-color: #cbd5e1;
+  border-color: #cfcfca;
 }
 
 .card-thumb {
@@ -566,7 +605,7 @@ body {
 
 .card-url {
   font-size: 12px;
-  color: var(--primary);
+  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -583,11 +622,11 @@ body {
 
 .badge-user {
   font-size: 11px;
-  background: #eff6ff;
-  color: var(--primary);
+  background: #f1f1ed;
+  color: var(--text);
   padding: 2px 8px;
   border-radius: 999px;
-  font-weight: 500;
+  font-weight: 600;
   max-width: 160px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -762,7 +801,7 @@ body {
 
 .issue-item.active {
   border-color: var(--primary);
-  background: #eff6ff;
+  background: #f1f1ed;
 }
 
 .issue-num {
@@ -847,8 +886,8 @@ body {
   max-width: 700px;
   margin: 16px auto 0;
   padding: 10px 16px;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  background: #f1f1ed;
+  border: 1px solid var(--border);
   border-radius: 10px;
   font-size: 13px;
   color: var(--text);
@@ -895,8 +934,8 @@ body {
 .preview-badge {
   font-size: 11px;
   font-weight: 700;
-  background: #fef9c3;
-  color: #a16207;
+  background: #ededea;
+  color: #555;
   padding: 2px 8px;
   border-radius: 999px;
   flex-shrink: 0;
@@ -1019,7 +1058,7 @@ body {
 
 .inspect-room-row.active {
   border-color: var(--primary);
-  background: #eff6ff;
+  background: #f1f1ed;
 }
 
 .inspect-room-name {
@@ -1118,7 +1157,7 @@ body {
 #btn-inspect-results {
   max-width: 320px;
   margin: 0 auto;
-  box-shadow: 0 4px 16px rgba(59,130,246,.35);
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
 }
 
 /* 결과 단계 */
@@ -1306,7 +1345,7 @@ body {
   background: var(--surface);
 }
 
-.modal-card input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
+.modal-card input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,0,0,.08); }
 
 .input-hint-row {
   display: flex;

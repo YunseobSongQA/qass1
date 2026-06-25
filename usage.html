@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>QASS 사용 가이드 — 설치부터 자동 점검까지</title>
   <meta name="description" content="QASS 시작 가이드. 크롬 확장 프로그램 설치, 방 만들기, 자동 캡처, 1차 자동 점검 결과 확인까지 단계별로 설명합니다." />
+  <link rel="icon" type="image/svg+xml" href="logo.svg" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link rel="stylesheet" href="landing.css" />
 </head>
@@ -12,7 +13,7 @@
 
   <header class="site-header">
     <div class="site-header-inner">
-      <a href="index.html" class="site-logo">QASS</a>
+      <a href="index.html" class="site-logo"><svg class="logo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="2"/><path d="M7.4 12.3l3 3 6.2-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>QASS</a>
       <nav class="site-nav">
         <a href="usage.html" class="active">사용 가이드</a>
         <a href="guide.html">QA 실무 가이드</a>
@@ -28,7 +29,7 @@
     <p class="page-date">설치부터 자동 점검 결과 확인까지, 처음 쓰는 분을 위한 안내</p>
 
     <div class="callout">
-      💡 요약: <strong>① 대시보드에서 방 만들기 → ② 확장 프로그램 설치·연결 → ③ 시작 버튼 →
+      <strong>요약 — ① 대시보드에서 방 만들기 → ② 확장 프로그램 설치·연결 → ③ 시작 버튼 →
       평소처럼 테스트</strong>. 캡처와 1차 점검은 자동으로 따라옵니다.
     </div>
 
@@ -80,7 +81,7 @@
     <ul>
       <li><strong>검색·필터</strong> — URL이나 페이지 제목으로 검색하고, 업로더별로 필터링할 수 있습니다.</li>
       <li><strong>다운로드</strong> — 캡처를 개별 저장하거나, 현재 필터 결과 전체를 ZIP으로 받을 수 있습니다.</li>
-      <li><strong>수동 업로드</strong> — 모바일 촬영 이미지 등 확장 밖에서 만든 증적도 📎 업로드 버튼으로 추가할 수 있습니다.</li>
+      <li><strong>수동 업로드</strong> — 모바일 촬영 이미지 등 확장 밖에서 만든 증적도 상단 업로드 버튼으로 추가할 수 있습니다.</li>
       <li><strong>실시간 동기화</strong> — 팀원이 캡처를 올리면 새로고침 없이 즉시 목록에 나타납니다.</li>
     </ul>
 
@@ -90,7 +91,7 @@
       저장됩니다. 확인 방법은 두 가지입니다.
     </p>
     <ul>
-      <li><strong>캡처 카드에서</strong> — 이슈가 있는 캡처에는 ⚠ 배지가 표시되고, "장애 보기"를 누르면
+      <li><strong>캡처 카드에서</strong> — 이슈가 있는 캡처에는 이슈 수 배지가 표시되고, "장애 보기"를 누르면
           원본 위에 이슈 위치가 번호 박스로 표시됩니다.</li>
       <li><strong>1차 자동 점검 탭에서</strong> — 상단 탭에서 폴더(방)와 캡처를 선택하면 띄어쓰기·맞춤법·UI
           장애별 합산 결과와 함께, 캡처별 검증 전·후 비교 화면을 볼 수 있습니다.</li>
@@ -103,7 +104,7 @@
     </p>
 
     <div class="callout">
-      ⚠ 자동 점검은 1차 스크리닝 도구입니다. 룰 기반 검사라 모든 오류를 찾지는 못하며, 최종
+      <strong>참고 —</strong> 자동 점검은 1차 스크리닝 도구입니다. 룰 기반 검사라 모든 오류를 찾지는 못하며, 최종
       판단은 사람의 확인을 거치는 것을 권장합니다. 증적 이미지 원본은 어떤 경우에도 수정되지
       않습니다.
     </div>
@@ -112,7 +113,7 @@
     <h3>캡처가 업로드되지 않아요</h3>
     <p>
       확장 팝업에서 방 연결 상태를 먼저 확인하세요. 연결이 풀려 있으면 캡처는 로컬 기록에만
-      남습니다. 연결돼 있는데도 실패한다면 팝업의 캡처 목록에서 "✕ 업로드 실패" 배지를 확인할
+      남습니다. 연결돼 있는데도 실패한다면 팝업의 캡처 목록에서 "업로드 실패" 배지를 확인할
       수 있습니다.
     </p>
     <h3>이슈가 하나도 검출되지 않아요</h3>
@@ -129,7 +130,7 @@
   <footer class="site-footer">
     <div class="site-footer-inner">
       <div class="footer-brand">
-        <div class="site-logo">QASS</div>
+        <div class="site-logo"><svg class="logo-mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5.5" stroke="currentColor" stroke-width="2"/><path d="M7.4 12.3l3 3 6.2-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>QASS</div>
         <p>팀을 위한 QA 증적 관리 플랫폼</p>
       </div>
       <div class="footer-links">
