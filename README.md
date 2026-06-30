@@ -72,3 +72,5 @@ Cloudflare 대시보드에서 이 프로젝트의 "Git 자동 빌드/배포"를 
 5. **Appium**: Actions → *Appium (manual only · emulator)* → **Run workflow** (스모크 · 실패 가능,
    정식 실행은 로컬).
 6. 각 실행의 **Artifacts** 에서 `api-newman-report`(htmlextra HTML), `playwright-report` 등 확인.
+
+<!-- redeploy: trigger CI pipeline (no functional change) -->
