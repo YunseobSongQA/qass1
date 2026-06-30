@@ -1,0 +1,54 @@
+name: Selenium (manual / weekly)
+
+# Selenium 은 Playwright 와 같은 플로우의 "중복 검증"이라 배포 게이트에서 제외한다.
+# (게이트는 ci-gate.yml 의 API + Playwright 만 담당)
+on:
+  workflow_dispatch:          # 수동 실행
+  schedule:
+    - cron: '0 3 * * 1'       # 매주 월요일 03:00 UTC — 회귀 감시용 주 1회
+
+env:
+  AUTO_REPO: YunseobSongQA/Auto
+  TARGET_URL: https://qass1.pages.dev
+
+jobs:
+  selenium:
+    name: Selenium WebDriver (headless Chrome)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto repo(테스트 소스) 체크아웃 → ./auto
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.AUTO_REPO }}
+          path: auto
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Chrome 설치
+        id: chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+
+      - name: 의존성 설치
+        working-directory: auto/automation-portfolio/selenium
+        run: npm ci
+
+      - name: Selenium 실행 (headless)
+        working-directory: auto/automation-portfolio/selenium
+        env:
+          # run.js 는 HEADED 미설정 시 headless. CHROME_BIN 으로 설치된 크롬 지정.
+          # selenium-webdriver 4 의 Selenium Manager 가 chromedriver 를 자동 매칭.
+          CHROME_BIN: ${{ steps.chrome.outputs.chrome-path }}
+          TARGET_URL: ${{ env.TARGET_URL }}
+        run: npm test
+
+      - name: 결과 artifact 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: selenium-result
+          path: auto/automation-portfolio/selenium/artifacts
+          if-no-files-found: warn

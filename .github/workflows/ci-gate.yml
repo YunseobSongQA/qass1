@@ -1,0 +1,133 @@
+name: CI Gate (deploy)
+
+# 배포 게이트: main 으로의 모든 push/PR 마다 자동화 테스트를 돌려
+# API(Newman) + Playwright 두 job 이 모두 통과해야만 배포(deploy) 로 넘어간다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 같은 ref 에 새 push 가 오면 진행 중인 이전 실행은 취소(자원 절약).
+concurrency:
+  group: ci-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AUTO_REPO: YunseobSongQA/Auto        # 자동화 테스트 단일 소스(Auto repo, public)
+  TARGET_URL: https://qass1.pages.dev  # 테스트가 때릴 배포된 QASS URL
+
+jobs:
+  # ── 게이트 job A: API / Newman ────────────────────────────────────────
+  api:
+    name: API · Newman (gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: qass1 체크아웃 (트리거 repo)
+        uses: actions/checkout@v4
+
+      - name: Auto repo(테스트 소스) 체크아웃 → ./auto
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.AUTO_REPO }}
+          path: auto
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 의존성 설치 (+ htmlextra 리포터)
+        working-directory: auto/automation-portfolio/api
+        run: |
+          npm ci
+          npm install -g newman newman-reporter-htmlextra
+
+      - name: 기능 단위 테스트 (Supabase REST 읽기)
+        working-directory: auto/automation-portfolio/api
+        env:
+          # 비밀값은 하드코딩 금지 — Secrets 참조만. 미등록 시 빈 값(코드 기본값 사용).
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: node --test qass-api.test.js
+
+      - name: Newman 실행 + htmlextra HTML 리포트
+        working-directory: auto/automation-portfolio/api
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          # Secrets 가 있으면 컬렉션 변수(base_url/anon_key)를 덮어쓰고,
+          # 없으면 컬렉션의 공개 기본값(anon 읽기 전용)을 그대로 사용한다.
+          ARGS=""
+          [ -n "$SUPABASE_URL" ] && ARGS="$ARGS --env-var base_url=${SUPABASE_URL%/}/rest/v1"
+          [ -n "$SUPABASE_ANON_KEY" ] && ARGS="$ARGS --env-var anon_key=$SUPABASE_ANON_KEY"
+          newman run postman/qass.postman_collection.json \
+            -r cli,htmlextra \
+            --reporter-htmlextra-export newman-report.html \
+            $ARGS
+
+      - name: API 리포트 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-newman-report
+          path: auto/automation-portfolio/api/newman-report.html
+          if-no-files-found: warn
+
+  # ── 게이트 job B: Playwright ──────────────────────────────────────────
+  playwright:
+    name: Playwright (gate)
+    runs-on: ubuntu-latest
+    steps:
+      - name: qass1 체크아웃
+        uses: actions/checkout@v4
+
+      - name: Auto repo 체크아웃 → ./auto
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.AUTO_REPO }}
+          path: auto
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 의존성 설치
+        working-directory: auto/automation-portfolio/playwright
+        run: npm ci
+
+      - name: 브라우저 설치 (시스템 의존성 포함)
+        working-directory: auto/automation-portfolio/playwright
+        run: npx playwright install --with-deps
+
+      - name: Playwright 실행 (headless)
+        working-directory: auto/automation-portfolio/playwright
+        env:
+          BASE_URL: ${{ env.TARGET_URL }}   # 대상 URL 을 env 로 주입(테스트 파라미터화 대비)
+        run: npx playwright test
+
+      - name: playwright-report 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: auto/automation-portfolio/playwright/playwright-report
+          if-no-files-found: warn
+
+  # ── 배포(CD): 두 게이트 통과 + main push 일 때만 ──────────────────────
+  deploy:
+    name: Deploy · Cloudflare Pages
+    needs: [api, playwright]            # 두 job 모두 성공해야 실행
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: qass1 체크아웃 (정적 파일 = 배포 대상)
+        uses: actions/checkout@v4
+
+      - name: Cloudflare Pages 배포 (Direct Upload)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # 빌드 없는 정적 사이트 → 저장소 루트를 그대로 업로드.
+          command: pages deploy . --project-name=qass1 --branch=main --commit-dirty=true
