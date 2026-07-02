@@ -1,42 +1,38 @@
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #f6f6f4;
+  --bg: #f6f7fb;
   --surface: #ffffff;
-  --border: #e6e6e2;
-  --text: #1a1a1a;
-  --text-muted: #6b6b6b;
-  --primary: #1a1a1a;
-  --primary-dark: #000000;
-  --grad: #141414;
+  --border: #e4e7f0;
+  --text: #14161c;
+  --text-muted: #5a6173;
+  --primary: #4f6ef7;
+  --primary-dark: #3d5ce0;
+  --grad: linear-gradient(135deg, #4f6ef7 0%, #7b5cff 100%);
   --on-primary: #ffffff;
-  --subtle: #f1f1ed;
-  --border-strong: #cfcfca;
+  --subtle: #eef0fe;
+  --border-strong: #cfd6e6;
   --header-bg: rgba(255,255,255,.82);
-  --invert-bg: #141414;
-  --invert-fg: #ffffff;
-  --glow: rgba(0,0,0,.045);
+  --glow: rgba(79,110,247,.10);
   --radius: 16px;
   --shadow-sm: 0 1px 2px rgba(0,0,0,.05);
   --shadow-md: 0 10px 28px rgba(0,0,0,.09);
 }
 
 [data-theme="dark"] {
-  --bg: #0e0f12;
-  --surface: #16181d;
-  --border: #2a2d35;
-  --text: #f1f2f5;
-  --text-muted: #9aa0ab;
-  --primary: #f1f2f5;
-  --primary-dark: #ffffff;
-  --grad: #f1f2f5;
-  --on-primary: #141414;
-  --subtle: #20242c;
-  --border-strong: #3a3f4a;
+  --bg: #0c0e14;
+  --surface: #14171f;
+  --border: #262b38;
+  --text: #eef1f8;
+  --text-muted: #9aa3b8;
+  --primary: #6e8bff;
+  --primary-dark: #8099ff;
+  --grad: linear-gradient(135deg, #6e8bff 0%, #9b7bff 100%);
+  --on-primary: #ffffff;
+  --subtle: #1a1e31;
+  --border-strong: #39435c;
   --header-bg: rgba(18,20,25,.82);
-  --invert-bg: #f4f4f2;
-  --invert-fg: #141414;
-  --glow: rgba(255,255,255,.05);
+  --glow: rgba(110,139,255,.14);
   --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
   --shadow-md: 0 12px 30px rgba(0,0,0,.55);
 }
@@ -232,12 +228,10 @@ img { max-width: 100%; }
 }
 
 .grad-text {
-  color: var(--text);
-  background: linear-gradient(transparent 66%, rgba(0,0,0,.08) 0);
-}
-
-[data-theme="dark"] .grad-text {
-  background: linear-gradient(transparent 66%, rgba(255,255,255,.14) 0);
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .hero-sub {
@@ -512,9 +506,9 @@ img { max-width: 100%; }
   max-width: 1032px;
   margin: 0 auto;
   border-radius: 24px;
-  background: var(--invert-bg);
+  background: var(--grad);
   text-align: center;
-  color: var(--invert-fg);
+  color: #fff;
   padding: clamp(44px, 7vw, 72px) 24px;
   margin-bottom: 24px;
 }
@@ -527,15 +521,14 @@ img { max-width: 100%; }
 }
 
 .cta-section p {
-  color: var(--invert-fg);
-  opacity: .82;
+  color: rgba(255, 255, 255, .85);
   margin: 12px 0 28px;
 }
 
 .cta-section .btn-cta {
-  background: var(--invert-fg);
-  color: var(--invert-bg);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+  background: #fff;
+  color: var(--primary-dark);
+  box-shadow: 0 8px 24px rgba(28, 39, 84, .25);
 }
 
 /* ── 콘텐츠 페이지 (가이드/방침) ─────────────────────────────────────────────── */
@@ -562,12 +555,13 @@ img { max-width: 100%; }
 
 /* ── FOOTER ──────────────────────────────────────────────────────────────────── */
 .site-footer {
-  background: #141414;
-  color: #9a9a96;
+  background: var(--bg);
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
   margin-top: 40px;
 }
 
-.site-footer .site-logo { color: #fff; }
+.site-footer .site-logo { color: var(--text); }
 
 .site-footer-inner {
   max-width: 1080px;
@@ -592,22 +586,22 @@ img { max-width: 100%; }
 }
 
 .footer-links a {
-  color: #9a9a96;
+  color: var(--text-muted);
   text-decoration: none;
   font-size: 13px;
   transition: color .15s;
 }
 
-.footer-links a:hover { color: #fff; }
+.footer-links a:hover { color: var(--text); }
 
 .footer-contact { font-size: 13px; }
 
-.footer-contact a { color: #cfcfca; }
+.footer-contact a { color: var(--primary); }
 
 .footer-copy {
   margin-top: 10px;
   font-size: 12px;
-  color: #6a6a66;
+  color: var(--text-muted);
 }
 
 /* ── 모바일 ──────────────────────────────────────────────────────────────────── */

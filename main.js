@@ -95,6 +95,12 @@ async function ensureTestRoom() {
   } catch (_) {}
 }
 
+// 테스트 방을 항상 맨 위로 (나머지는 기존 순서 유지 — Array.sort는 안정 정렬)
+function sortTestFirst(rooms) {
+  return rooms.slice().sort((a, b) =>
+    (b.room_name === TEST_ROOM_NAME) - (a.room_name === TEST_ROOM_NAME));
+}
+
 // ── 방 목록 ──────────────────────────────────────────────────────────────────
 async function loadRooms() {
   const grid = document.getElementById('rooms-grid');
@@ -105,7 +111,7 @@ async function loadRooms() {
       .select('id, room_name, created_by, created_at')
       .order('created_at', { ascending: false });
     if (error) throw error;
-    renderRooms(data || []);
+    renderRooms(sortTestFirst(data || []));
   } catch (err) {
     grid.innerHTML = `<div class="empty-state">오류: ${esc(err.message)}</div>`;
   }
@@ -120,23 +126,27 @@ function renderRooms(rooms) {
   }
   rooms.forEach(room => {
     const card = document.createElement('div');
-    card.className = 'room-card';
     const isTest = room.room_name === TEST_ROOM_NAME;
+    card.className = isTest ? 'room-card room-card-test' : 'room-card';
     const date = room.created_at ? new Date(room.created_at).toLocaleDateString('ko-KR') : '';
     card.innerHTML = `
       <div class="room-card-icon">${isTest
         ? '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3h6M10 3v6.2L5.6 16.9A2 2 0 0 0 7.3 20h9.4a2 2 0 0 0 1.7-3.1L14 9.2V3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>'
         : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.2h7A1.5 1.5 0 0 1 19 8.7v8.8A1.5 1.5 0 0 1 17.5 19h-13A1.5 1.5 0 0 1 3 17.5v-11Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'}</div>
       <div class="room-card-info">
-        <div class="room-card-name">${esc(room.room_name)}${isTest ? ' <span class="test-badge">테스트</span>' : ''}</div>
-        <div class="room-card-meta">만든이: ${esc(room.created_by || '익명')} · ${date}</div>
+        <div class="room-card-name">${esc(room.room_name)}${isTest ? ' <span class="test-badge">여기서 시작</span>' : ''}</div>
+        <div class="room-card-meta">${isTest
+          ? '비밀번호 없이 바로 입장해 예시 증적을 둘러보세요.'
+          : `만든이: ${esc(room.created_by || '익명')} · ${date}`}</div>
       </div>
       <div class="room-card-actions">
-        <button class="btn-sm btn-primary room-enter-btn">입장 →</button>
+        <button class="btn-sm btn-primary room-enter-btn">${isTest ? '체험 시작 →' : '입장 →'}</button>
         ${!isTest && currentUser && currentUser === room.created_by ? '<button class="btn-sm btn-danger room-delete-btn">삭제</button>' : ''}
       </div>
     `;
-    card.querySelector('.room-enter-btn').addEventListener('click', () => openEnterModal(room, isTest));
+    // 테스트 방은 비밀번호 모달 없이 바로 입장 — 체험 흐름이 끊기지 않도록
+    card.querySelector('.room-enter-btn').addEventListener('click', () =>
+      isTest ? enterRoom(room, currentUser || '테스트 사용자') : openEnterModal(room, isTest));
     card.querySelector('.room-delete-btn')?.addEventListener('click', () => deleteRoom(room));
     grid.appendChild(card);
   });
@@ -825,7 +835,7 @@ async function loadInspectRooms() {
     if (capsRes.error) throw capsRes.error;
     const counts = {};
     (capsRes.data || []).forEach(c => { counts[c.room_id] = (counts[c.room_id] || 0) + 1; });
-    inspectRooms = roomsRes.data || [];
+    inspectRooms = sortTestFirst(roomsRes.data || []);
     renderInspectRooms(counts);
   } catch (err) {
     wrap.innerHTML = `<div class="empty-state">오류: ${esc(err.message)}</div>`;
