@@ -350,10 +350,21 @@ body {
   gap: 8px;
 }
 
+.room-card-test {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), var(--shadow-sm);
+}
+
+.room-card-test .room-card-icon {
+  color: var(--on-primary);
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
 .test-badge {
   font-size: 11px;
-  background: var(--subtle);
-  color: #555;
+  background: var(--primary);
+  color: var(--on-primary);
   padding: 2px 8px;
   border-radius: 999px;
   font-weight: 600;
